@@ -3,6 +3,8 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState, useEffect } from 'react';
+import { useScrollAnimation } from '../hooks/use-scroll-animation';
+import { useStickyHeader } from '../hooks/use-sticky-header';
 
 interface PublicLayoutProps {
   children: React.ReactNode;
@@ -11,58 +13,36 @@ interface PublicLayoutProps {
 export function PublicLayout({ children }: PublicLayoutProps) {
   const pathname = usePathname();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const isSticky = useStickyHeader();
+  
+  // Initialize scroll animations
+  useScrollAnimation();
 
+  // Handle menu toggle and body class
   useEffect(() => {
-    // Load template scripts only on client side
-    if (typeof window !== 'undefined') {
-      // Check if scripts are already loaded
-      if (document.querySelector('script[src="/assets/js/vendor/jquery-3.7.1.min.js"]')) {
-        return;
-      }
-
-      // Load jQuery first (required by other scripts)
-      const jqueryScript = document.createElement('script');
-      jqueryScript.src = '/assets/js/vendor/jquery-3.7.1.min.js';
-      jqueryScript.async = false;
-      document.body.appendChild(jqueryScript);
-
-      jqueryScript.onload = () => {
-        // Load dependencies in order
-        const loadScript = (src: string, callback?: () => void) => {
-          const script = document.createElement('script');
-          script.src = src;
-          script.async = false; // Load synchronously to maintain order
-          if (callback) {
-            script.onload = callback;
-          }
-          document.body.appendChild(script);
-        };
-
-        // Load bootstrap
-        loadScript('/assets/js/bootstrap.min.js');
-
-        // Load magnific-popup (required by main.js)
-        loadScript('/assets/js/jquery.magnific-popup.min.js', () => {
-          // Load other optional dependencies
-          loadScript('/assets/js/swiper-bundle.min.js');
-          loadScript('/assets/js/scrollCue.min.js');
-          loadScript('/assets/js/imagesloaded.pkgd.min.js');
-          loadScript('/assets/js/isotope.pkgd.min.js');
-          loadScript('/assets/js/jquery.counterup.min.js');
-
-          // Load main.js last (depends on all plugins)
-          loadScript('/assets/js/main.js');
-        });
-      };
+    if (isMenuOpen) {
+      document.body.classList.add('ot-body-visible');
+    } else {
+      document.body.classList.remove('ot-body-visible');
     }
-  }, []);
+  }, [isMenuOpen]);
+
+  // Close menu when route changes
+  useEffect(() => {
+    setIsMenuOpen(false);
+  }, [pathname]);
 
   const isActive = (path: string) => pathname === path;
 
   return (
     <>
       {/* Mobile Menu */}
-      <div className={`ot-menu-wrapper ${isMenuOpen ? 'active' : ''}`}>
+      <div className={`ot-menu-wrapper ${isMenuOpen ? 'active' : ''}`} onClick={(e) => {
+        // Close menu when clicking on the overlay
+        if (e.target === e.currentTarget) {
+          setIsMenuOpen(false);
+        }
+      }}>
         <div className="ot-menu-area text-center">
           <button className="ot-menu-toggle" onClick={() => setIsMenuOpen(false)}>
             <i className="fal fa-times"></i>
@@ -75,16 +55,16 @@ export function PublicLayout({ children }: PublicLayoutProps) {
           <div className="ot-mobile-menu">
             <ul>
               <li className={isActive('/') ? 'active' : ''}>
-                <Link href="/">Home</Link>
+                <Link href="/" onClick={() => setIsMenuOpen(false)}>Home</Link>
               </li>
               <li className={isActive('/about') ? 'active' : ''}>
-                <Link href="/about">About</Link>
+                <Link href="/about" onClick={() => setIsMenuOpen(false)}>About</Link>
               </li>
               <li className={isActive('/services') ? 'active' : ''}>
-                <Link href="/services">Services</Link>
+                <Link href="/services" onClick={() => setIsMenuOpen(false)}>Services</Link>
               </li>
               <li className={isActive('/contact') ? 'active' : ''}>
-                <Link href="/contact">Contact</Link>
+                <Link href="/contact" onClick={() => setIsMenuOpen(false)}>Contact</Link>
               </li>
             </ul>
           </div>
@@ -121,7 +101,7 @@ export function PublicLayout({ children }: PublicLayoutProps) {
             </div>
           </div>
         </div>
-        <div className="sticky-wrapper">
+        <div className={`sticky-wrapper ${isSticky ? 'sticky' : ''}`}>
           <div className="menu-area">
             <div className="container">
               <div className="row align-items-center justify-content-between">

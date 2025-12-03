@@ -18,8 +18,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         {/* Template CSS */}
         <link rel="stylesheet" href="/assets/css/bootstrap.min.css" />
         <link rel="stylesheet" href="/assets/css/fontawesome.min.css" />
-        <link rel="stylesheet" href="/assets/css/magnific-popup.min.css" />
-        <link rel="stylesheet" href="/assets/css/swiper-bundle.min.css" />
         <link rel="stylesheet" href="/assets/css/style.css" />
         {/* Google Fonts */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
