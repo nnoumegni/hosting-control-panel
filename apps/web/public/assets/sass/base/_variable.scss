@@ -1,0 +1,136 @@
+:root {
+  --theme-color         : #3C72FC;
+  --theme-color2        : #E0009B;
+  --title-color         : #ffffff;
+  --body-color          : #A9A9A9;
+  --smoke-color         : #00172F;
+  --smoke-color2        : #FFF7ED;
+  --smoke-color3        : #DFF8F6;
+  --smoke-color4        : #FFF9EF;
+  --black-color         : #000000;
+  --black-color2        : #080E1C;
+  --gray-color          : #EFF5F6;
+  --white-color         : #ffffff;
+  --light-color         : #8D96AD;
+  --yellow-color        : #FC800A;
+  --success-color       : #069845;
+  --error-color         : #dc3545;
+  --ot-border-color     : rgba(227, 227, 227, 0.24);
+  --ot-border-color2    : #E3E3E3;
+  --title-font          : "Kumbh Sans", serif;
+  --body-font           : "Kumbh Sans", serif;
+  --icon-font           : "Font Awesome 6 Pro";
+  --main-container      : 1170px;
+  --container-gutters   : 30px;
+  --section-space       : 120px;
+  --section-space-mobile: 70px;
+  --section-title-space : 50px;
+  --ripple-ani-duration : 5s;
+  --ot-body-background  : #000916;
+}
+
+// Color Variation
+$theme-color          : var(--theme-color);
+$theme-color2         : var(--theme-color2);
+$title-color          : var(--title-color);
+$body-color           : var(--body-color);
+$smoke-color          : var(--smoke-color);
+$smoke-color2         : var(--smoke-color2);
+$smoke-color3         : var(--smoke-color3);
+$smoke-color4         : var(--smoke-color4);
+$white-color          : var(--white-color);
+$light-color          : var(--light-color);
+$black-color          : var(--black-color);
+$black-color2         : var(--black-color2);
+$gray-color           : var(--gray-color);
+$yellow-color         : var(--yellow-color);
+$success-color        : var(--success-color);
+$error-color          : var(--error-color);
+$border-color         : var(--ot-border-color);
+$border-color2        : var(--ot-border-color2);
+$body-background      : var(--ot-body-background);
+
+// Font Variation
+$icon-font   : var(--icon-font);
+
+// Typography
+$title-font      : var(--title-font);
+$body-font       : var(--body-font);
+$body-font-size  : 16px;
+$body-line-Height: 28px;
+$body-font-weight: 400;
+$p-line-Height   : 1.75;
+
+// Device Variation
+$hd: 1921px; // Large Device Than 1920
+$xxl: 1500px; // Extra large Device
+$ml: 1399px; // Medium Large Device
+$xl: 1299px; // Medium Large Device
+$lg: 1199px; // Large Device (Laptop)
+$md: 991px; // Medium Device (Tablet)
+$sm: 767px; // Small Device
+$xs: 575px; // Extra Small Device
+$vxs: 375px; // Extra Small Device
+
+// Spacing Count with 5x 
+$space-count: 10;
+
+// Section Space  For large Device
+$space         : var(--section-space);
+$space-extra   : calc(var(--section-space) - 30px);
+$space-extra2   : calc(var(--section-space) - 40px);
+
+// Section Space On small Device
+$space-mobile         : var(--section-space-mobile);
+$space-mobile-extra: calc(var(--section-space-mobile) - 30px);
+
+
+// BG Color Mapping 
+$bgcolorMap  : ();
+$bgcolorMap  : map-merge((
+  "theme"    : $theme-color,
+  "smoke"    : $smoke-color,
+  "smoke2"   : $smoke-color2,
+  "smoke3"   : $smoke-color3,
+  "smoke4"   : $smoke-color4,
+  "white"    : $white-color,
+  "gray"     : $gray-color,
+  "black"    : $black-color,
+  "black2"   : $black-color2,
+  "title"    : $title-color,
+), $bgcolorMap);
+
+
+// Overlay Color Mapping 
+$overlaycolorMap : ();
+$overlaycolorMap : map-merge((
+  "theme"        : $theme-color,
+  "title"        : $title-color,
+  "smoke"        : $smoke-color,
+  "white"        : $white-color,
+  "black"        : $black-color,
+  "overlay1"     : #080E1C,
+), $overlaycolorMap);
+
+
+// Text Color Mapping 
+$textColorsMap : ();
+$textColorsMap : map-merge((
+  "theme"      : $theme-color,
+  "title"      : $title-color,
+  "body"       : $body-color,
+  "white"      : $white-color,
+  "light"      : $light-color,
+  "yellow"     : $yellow-color,
+  "success"    : $success-color,
+  "error"      : $error-color
+), $textColorsMap);
+
+
+// Font Mapping 
+$fontsMap    : ();
+$fontsMap    : map-merge((
+  "icon"     : $icon-font,
+  "title"    : $title-font,
+  "body"     : $body-font,
+), $fontsMap);

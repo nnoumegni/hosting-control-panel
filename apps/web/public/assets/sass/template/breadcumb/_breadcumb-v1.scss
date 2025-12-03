@@ -1,0 +1,110 @@
+.breadcumb-menu {
+    max-width: 100%;
+    padding: 0;
+    margin: 0;
+    list-style-type: none;
+    position: relative;
+    margin-top: 17px;
+    margin-bottom: -0.4em;
+    li {
+        display: inline-block;
+        margin-right: 3px;
+        padding-right: 3px;
+        list-style: none;
+        position: relative;
+
+        &:after {
+            content: "\f054";
+            position: relative;
+            margin-left: 7px;
+            font-weight: 500;
+            font-size: 14px;
+            color: inherit;
+            font-family: $icon-font;
+        }
+
+        &:last-child {
+            padding-right: 0;
+            margin-right: 0;
+            color: $theme-color;
+
+            &:after {
+                display: none;
+            }
+        }
+
+        // &:last-child {
+        //   &,
+        //   a,
+        //   span {
+        //     color: $theme-color;
+        //   }
+        // }
+    }
+
+    li,
+    a,
+    span {
+        white-space: normal;
+        color: inherit;
+        word-break: break-word;
+        font-weight: 600;
+        font-size: 18px;
+        color: $title-color;
+    }
+}
+
+.breadcumb-title {
+    margin: -0.18em 0 -0.18em 0;
+	line-height: 1.1;
+    font-weight: 500;
+    font-size: 40px;
+    font-weight: 700;
+}
+
+.breadcumb-wrapper {
+    background-color: #F0F0F0;
+    overflow: hidden;
+    text-align: center;
+    .breadcumb-content {
+        --space: 150px;
+        padding: var(--space) 0;
+        position: relative;
+        z-index: 1;
+        @include md {
+            --space: 120px;
+        }
+        @include sm {
+            --space: 100px;
+        }
+    }
+}
+
+@include lg {
+	.breadcumb-menu {
+        li,
+        a,
+        span {
+            font-size: 16px;
+        }
+    }
+}
+
+body .ot-header.header-default ~ .breadcumb-wrapper .breadcumb-content {
+    padding: calc(var(--space) + 80px) 0 var(--space);
+    @include md {
+        padding: calc(var(--space) + 80px) 0 var(--space);
+    }
+    @include xs {
+        padding: calc(var(--space) + 80px) 0 var(--space);
+    }
+}
+body .ot-header.header-default:has(.header-top) ~ .breadcumb-wrapper .breadcumb-content {
+    padding: calc(var(--space) + 130px) 0 var(--space);
+    @include md {
+        padding: calc(var(--space) + 130px) 0 var(--space);
+    }
+    @include xs {
+        padding: calc(var(--space) + 130px) 0 var(--space);
+    }
+}

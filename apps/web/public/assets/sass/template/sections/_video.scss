@@ -1,0 +1,183 @@
+/* Video sec 1 ---------------------------------- */
+.video-area-1 {
+    padding: 250px 0;
+    background-attachment: fixed;
+} 
+.video-box1 {
+    text-align: center;
+    position: relative;
+    z-index: 1;
+    display: block;
+    height: 152px;
+    .about-video-icon {
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        transform: translate(-50%, -50%);
+        z-index: 1;
+        font-size: 32px;
+        color: $white-color;
+    }
+}
+.about-video-tag {
+    background: transparent;
+    display: inline-block;
+    height: 152px;
+    width: 152px;
+    border-radius: 50%;
+    z-index: 1;
+    font-size: 16px;
+    font-weight: 500;
+    font-family: $title-font;
+    color: $white-color;
+    line-height: 12px;
+    text-align: center;
+    animation: spin 10s infinite alternate-reverse;
+    &:after {
+        content: '';
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        background: transparent;
+        border: 27px solid $theme-color;
+        height: 100%;
+        width: 100%;
+        transform: translate(-50%, -50%);
+        border-radius: 50%;
+    }
+    span {
+        --rotate-letter: 10deg;
+        height: 68px;
+        position: absolute;
+        width: 10px;
+        left: 45%;
+        top: 3px;
+        transform-origin: bottom center;
+        transform: rotate(var(--rotate-letter));
+        z-index: 1;
+        &.char2 {
+            transform: rotate(calc(var(--rotate-letter) * 2));
+        }
+        &.char3 {
+            transform: rotate(calc(var(--rotate-letter) * 3));
+        }
+        &.char4 {
+            transform: rotate(calc(var(--rotate-letter) * 4));
+        }
+        &.char5 {
+            transform: rotate(calc(var(--rotate-letter) * 5));
+        }
+        &.char6 {
+            transform: rotate(calc(var(--rotate-letter) * 6));
+        }
+        &.char7 {
+            transform: rotate(calc(var(--rotate-letter) * 7));
+        }
+        &.char8 {
+            transform: rotate(calc(var(--rotate-letter) * 8));
+        }
+        &.char9 {
+            transform: rotate(calc(var(--rotate-letter) * 9));
+        }
+        &.char10 {
+            transform: rotate(calc(var(--rotate-letter) * 10));
+        }
+        &.char11 {
+            transform: rotate(calc(var(--rotate-letter) * 11));
+        }
+        &.char12 {
+            transform: rotate(calc(var(--rotate-letter) * 12));
+        }
+        &.char13 {
+            transform: rotate(calc(var(--rotate-letter) * 13));
+        }
+        &.char14 {
+            transform: rotate(calc(var(--rotate-letter) * 14));
+        }
+        &.char15 {
+            transform: rotate(calc(var(--rotate-letter) * 15));
+        }
+        &.char16 {
+            transform: rotate(calc(var(--rotate-letter) * 16));
+        }
+        &.char17 {
+            transform: rotate(calc(var(--rotate-letter) * 17));
+        }
+        &.char18 {
+            transform: rotate(calc(var(--rotate-letter) * 18));
+        }
+        &.char19 {
+            transform: rotate(calc(var(--rotate-letter) * 19));
+        }
+        &.char20 {
+            transform: rotate(calc(var(--rotate-letter) * 20));
+        }
+        &.char21 {
+            transform: rotate(calc(var(--rotate-letter) * 21));
+        }
+        &.char22 {
+            transform: rotate(calc(var(--rotate-letter) * 22));
+        }   
+        &.char23 {
+            transform: rotate(calc(var(--rotate-letter) * 23));
+        }            
+        &.char24 {
+            transform: rotate(calc(var(--rotate-letter) * 24));
+        }  
+        &.char25 {
+            transform: rotate(calc(var(--rotate-letter) * 25));
+        }    
+        &.char26 {
+            transform: rotate(calc(var(--rotate-letter) * 26));
+        }   
+        &.char27 {
+            transform: rotate(calc(var(--rotate-letter) * 27));
+        }   
+        &.char28 {
+            transform: rotate(calc(var(--rotate-letter) * 28));
+        }   
+        &.char29 {
+            transform: rotate(calc(var(--rotate-letter) * 29));
+        }   
+        &.char30 {
+            transform: rotate(calc(var(--rotate-letter) * 30));
+        }   
+        &.char31 {
+            transform: rotate(calc(var(--rotate-letter) * 31));
+        }
+        &.char32 {
+            transform: rotate(calc(var(--rotate-letter) * 32));
+        }  
+        &.char33 {
+            transform: rotate(calc(var(--rotate-letter) * 33));
+        }  
+        &.char34 {
+            transform: rotate(calc(var(--rotate-letter) * 34));
+        } 
+        &.char35 {
+            transform: rotate(calc(var(--rotate-letter) * 35));
+        } 
+        &.char36 {
+            transform: rotate(calc(var(--rotate-letter) * 36));
+        } 
+    }
+}
+
+/* Video sec 2 ---------------------------------- */
+.video-box2 {
+    text-align: center;
+    padding: 85px 0;
+}
+
+.video-wrap1 {
+    position: relative;
+    z-index: 1;
+    display: block;
+    .play-btn {
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        transform: translate(-50%, -50%);
+        z-index: 1;
+    }
+}

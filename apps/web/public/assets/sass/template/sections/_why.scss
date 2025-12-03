@@ -1,0 +1,169 @@
+/* Why 1 ---------------------------------- */ 
+.why-bg-gradient1 {
+    width: 228px;
+    height: 228px;
+    &:after,
+    &:before {
+        width: inherit;
+        height: inherit;
+    }
+}
+.why-bg-gradient2 {
+    width: 182px;
+    height: 182px;
+    filter: blur(70px);
+    &:after,
+    &:before {
+        width: inherit;
+        height: inherit;
+    }
+}
+.why-img-box1 {
+    position: relative;
+    z-index: 2;
+    &-shape1 {
+        position: absolute;
+        inset: 13px 40px 13px 40px;
+        display: inline-block;
+        background: $body-background;
+        transform: skewX(9deg);
+        border-radius: 70px 24px;
+        z-index: -1;
+    }
+    &:after {
+        content: '';
+        position: absolute;
+        padding: 5px;
+        background: linear-gradient(0deg, $theme-color2, $theme-color 80%);
+        -webkit-mask: -webkit-linear-gradient(white, white) content-box, -webkit-linear-gradient(white, white);
+        -webkit-mask-composite: xor;
+        mask-composite: exclude;        
+        transform: skewX(9deg);
+        border-radius: 70px 24px;
+        inset: 10px 35px 10px 35px;
+        z-index: -1;
+        opacity: 0.5;
+    }
+    &:before {
+        content: '';
+        position: absolute;
+        padding: 5px;
+        background: linear-gradient(0deg, $theme-color2, $theme-color 80%);
+        -webkit-mask-composite: xor;
+        mask-composite: exclude;        
+        transform: skewX(9deg);
+        border-radius: 70px 24px;
+        inset: 10px 35px 10px 35px;
+        z-index: -2;
+        filter: blur(8px);
+        opacity: 0.5;
+    }
+    .img1 {
+        img {
+            width: 100%;
+        }
+    }
+    .about-experience-wrap {
+        background: $white-color;
+        padding: 24px;
+        border-radius: 16px;
+        display: inline-flex;
+        position: absolute;
+        left: 0;
+        bottom: 0;
+        gap: 11px;
+        font-size: 20px;
+        font-weight: 700;
+        color: $body-background;
+        align-items: center;
+        @include xs {
+            font-size: 18px;
+        }
+        @include vxs {
+            font-size: 16px;
+        }
+        .box-icon {
+            color: $theme-color;
+        }
+        .about-counter-wrap {
+            font-size: 74px;
+            font-weight: 700;
+            color: $theme-color;
+            line-height: 0.8;
+            @include lg {
+                font-size: 64px;
+            }
+            @include md {
+                font-size: 60px;
+            }
+            @include sm {
+                font-size: 56px;
+            }
+            @include xs {
+                font-size: 40px;
+            }
+            @include vxs {
+                font-size: 36px;
+            }
+        }
+    }
+    @include lg {
+        display: inline-block;
+    }
+}
+.why-feature-wrap {
+    .box-icon {
+        display: inline-flex;
+        border-radius: 12px;
+        background: $theme-color;
+        border-right: 3px solid $white-color;
+        border-bottom: 3px solid $white-color;
+        width: 60px;
+        height: 60px;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 24px;
+        img,
+        svg,
+        i {
+            transition: 0.4s;
+        }
+    }
+    .box-title {
+        font-size: 18px;
+        font-weight: 600;
+    }
+    .box-text {
+        font-size: 14px;
+    }
+    &:hover {
+        .box-icon {
+            img,
+            svg,
+            i {
+                transform: scale(-1) rotate(180deg);
+            }
+        }
+    }
+}
+
+/* Why 2 ---------------------------------- */ 
+.why-img-box2 {
+    position: relative;
+    border-radius: 24px;
+    overflow: hidden;
+    z-index: 1;
+    display: inline-block;
+    &:after {
+        content: '';
+        position: absolute;
+        inset: 0;
+        border-radius: 24px;
+        padding: 2px;
+        background: linear-gradient(-30deg, $theme-color2, $theme-color 80%);
+        -webkit-mask: -webkit-linear-gradient(white, white) content-box, -webkit-linear-gradient(white, white);
+        -webkit-mask-composite: xor;
+        mask-composite: exclude;
+        z-index: 1;
+    }
+}

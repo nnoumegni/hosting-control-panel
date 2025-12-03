@@ -1,0 +1,63 @@
+/* Case card ------------------------------ */
+.case-img-group {
+    max-width: 230px;
+    @include md {
+        max-width: 100%;
+    }
+}
+.case-card {
+    background-color: #EFF3FB;
+    border-radius: 20px;
+    padding: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    .box-content {
+        max-width: 370px;
+    }
+    .box-title {
+        font-size: 30px;
+        margin-bottom: 30px;
+        @include lg {
+            font-size: 26px;
+        }
+    }
+    .ot-btn {
+        margin-top: 40px;
+    }
+}
+@include lg {
+    .case-card .box-content {
+        max-width: 270px;
+    }
+}
+@include sm {
+    .case-card {
+        flex-direction: column-reverse;
+        align-items: stretch;
+        border-radius: 10px;
+        gap: 35px;
+        .box-img {
+            width: 100%;
+            img {
+                width: 100%;
+            }
+        }
+        .box-content {
+            max-width: 100%;
+        }
+        .box-title {
+            margin-bottom: 25px;
+        }
+        .ot-btn {
+            margin-top: 35px;
+        }
+    }
+}
+
+@include vxs {
+    .case-card {
+        padding: 25px;
+    }
+}

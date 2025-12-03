@@ -1,0 +1,85 @@
+.skill-feature {
+    text-align: left;
+    &:not(:last-child) {
+        margin-bottom: 30px;
+    }
+    .box-title,
+    .progress-value {
+        font-size: 14px;
+        font-weight: 500;
+        margin-bottom: 10px;
+        margin-top: -0.5em;
+        font-family: $title-font;
+        color: $title-color;
+        text-transform: uppercase;
+    }
+    .progress {
+        position: relative;
+        height: 16px;
+        background-color: $white-color;
+        box-shadow: 0px 10px 31px rgba(169, 177, 193, 0.17);
+        border: 1px solid #D5E0F5;
+        overflow: visible;
+        border-radius: 99px;
+    }
+
+    .progress-bar {
+        background-color: $theme-color;
+        height: 5px;
+        margin: 5px;
+        border-radius: inherit;
+        overflow: visible;
+        position: relative;
+    }
+    .progress-value {
+        position: absolute;
+        top: -30px;
+        right: -8px;
+    }
+}
+.video-btn {
+    width: 50px;
+    width: 50px;
+    line-height: 50px;
+    background-color: rgba($color: #0E59F2, $alpha: 0.7);
+    color: $white-color;
+    text-align: center;
+    transition: 0.4s ease-in-out;
+    border-radius: 5px;
+    &:hover {
+        background-color: $theme-color;
+        color: $white-color;
+    }
+}
+.ot-video {
+    .video-btn {
+        position: absolute;
+        top: calc(50% - 25px);
+        left: calc(50% - 25px);
+    }
+}
+.skill-img {
+    > img {
+        border-radius: 15px;
+        @include sm {
+            border-radius: 10px;
+        }
+    }
+    filter: drop-shadow(0px 4px 28px rgba(0, 0, 0, 0.22));
+    .ot-video {
+        position: absolute;
+        bottom: 0;
+        right: 0;
+        border-radius: 10px 0 10px 0;
+        padding: 8px 0 0 8px;
+        background-color: $white-color;
+        @include xs {
+            max-width: 55%;
+        }
+    }
+}
+
+.bg-lines {
+    background-image: repeating-linear-gradient(to left, transparent 256px, transparent 726px, $border-color 726px, $border-color 727px);
+    background-position: center center;
+}

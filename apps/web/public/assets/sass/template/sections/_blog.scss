@@ -1,0 +1,551 @@
+blockquote,
+.wp-block-quote {
+    font-size: 16px;
+    line-height: 1.56;
+    padding: 32px;
+    font-weight: 500;
+    display: block;
+    position: relative;
+    background-color: $body-background;
+    margin: 35px 0 45px 0;
+    color: $title-color;
+    font-family: $body-font;
+    border: 0 !important;
+    border-radius: 24px;
+
+    p {
+        font-size: inherit;
+        font-family: inherit;
+        margin-top: -0.3em;
+        margin-bottom: 28px;
+        line-height: inherit;
+        color: inherit;
+        width: 100%;
+        position: relative;
+        z-index: 3;
+        a {
+            color: inherit;
+        }
+    }
+
+    &:before {
+        content: "";
+        position: absolute;
+        bottom: 32px;
+        right: 32px;
+        height: 50px;
+        width: 33px;
+        background-color: transparent;
+    }
+    &:after {
+        content: "";
+        position: absolute;
+        bottom: 32px;
+        right: 32px;
+        height: 31px;
+        width: 38px;
+        background: linear-gradient(150deg, $theme-color, $theme-color2);
+        clip-path: path(
+            "M15.2 0H1.68889C0.757636 0 0 0.69533 0 1.55V14.3375C0 15.1922 0.757636 15.8875 1.68889 15.8875H7.6V17.4375C7.6 20.2152 5.13768 22.475 2.11111 22.475C1.602 22.475 0.844444 22.7846 0.844444 23.6375V29.8375C0.844444 30.6904 1.602 31 2.11111 31C10.2596 31 16.8889 24.9159 16.8889 17.4375V1.55C16.8889 0.69533 16.1313 0 15.2 0ZM16.0444 17.4375C16.0444 24.4885 9.79395 30.225 2.11111 30.225C1.98419 30.225 1.68889 30.1873 1.68889 29.8375V23.6375C1.68889 23.3254 1.9212 23.2545 2.11111 23.25C5.60331 23.25 8.44444 20.6425 8.44444 17.4375V15.5C8.44444 15.286 8.25537 15.1125 8.02222 15.1125H1.68889C1.22326 15.1125 0.844444 14.7648 0.844444 14.3375V1.55C0.844444 1.12267 1.22326 0.775 1.68889 0.775H15.2C15.6656 0.775 16.0444 1.12267 16.0444 1.55V17.4375ZM36.3111 0H22.8C21.8687 0 21.1111 0.69533 21.1111 1.55V14.3375C21.1111 15.1922 21.8687 15.8875 22.8 15.8875H28.7111V17.4375C28.7111 20.2152 26.2488 22.475 23.2222 22.475C22.7131 22.475 21.9556 22.7846 21.9556 23.6375V29.8375C21.9556 30.6904 22.7131 31 23.2222 31C31.3707 31 38 24.9159 38 17.4375V1.55C38 0.69533 37.2424 0 36.3111 0ZM37.1556 17.4375C37.1556 24.4885 30.9051 30.225 23.2222 30.225C23.0953 30.225 22.8 30.1873 22.8 29.8375V23.6375C22.8 23.3254 23.0323 23.2545 23.2222 23.25C26.7144 23.25 29.5556 20.6425 29.5556 17.4375V15.5C29.5556 15.286 29.3666 15.1125 29.1333 15.1125H22.8C22.3344 15.1125 21.9556 14.7648 21.9556 14.3375V1.55C21.9556 1.12267 22.3344 0.775 22.8 0.775H36.3111C36.7767 0.775 37.1556 1.12267 37.1556 1.55V17.4375Z"
+        );
+    }
+
+    cite {
+        font-style: normal;
+        font-size: 18px;
+        font-weight: 600;
+        color: $theme-color;
+        display: block;
+        br {
+            display: none;
+        }
+    }
+    .desig {
+        font-size: 12px;
+        font-weight: 400;
+        color: $body-color;
+        display: block;
+        margin-bottom: -0.3em;
+    }
+    &.is-large:not(.is-style-plain),
+    &.is-style-large:not(.is-style-plain),
+    &.style-left-icon,
+    &.has-text-align-right {
+        padding: 40px;
+        margin-bottom: 30px;
+    }
+    &.style-left-icon {
+        font-size: 18px;
+        color: $body-color;
+        font-weight: 400;
+        line-height: 1.556;
+        background-color: $smoke-color;
+        padding-left: 160px;
+        &:before {
+            right: unset;
+            left: 56px;
+            top: 60px;
+            font-size: 6rem;
+            font-weight: 400;
+            line-height: 4rem;
+            color: $theme-color;
+            text-shadow: none;
+        }
+        cite {
+            color: $title-color;
+            &:before {
+                background-color: $title-color;
+                top: 8px;
+            }
+        }
+    }
+    &:not(:has(> cite)) {
+        p:last-child {
+            margin-bottom: -0.3em;
+        }
+    }
+    p {
+        &:has(cite) {
+            padding-bottom: 10px;
+        }
+        cite {
+            margin-top: 20px;
+            margin-bottom: -0.5em;
+            bottom: -32px;
+        }
+    }
+}
+.wp-block-pullquote {
+    color: $white-color;
+    padding: 0;
+}
+
+blockquote.has-very-dark-gray-color {
+    color: $title-color !important;
+}
+.wp-block-pullquote blockquote,
+.wp-block-pullquote p {
+    color: $title-color;
+}
+.wp-block-pullquote cite {
+    position: absolute;
+    color: $white-color !important;
+}
+.wp-block-column {
+    blockquote,
+    .wp-block-quote {
+        &:before {
+            width: 100%;
+            height: 60px;
+            font-size: 30px;
+        }
+        padding: 40px 15px 40px 15px;
+        &.style-left-icon,
+        &.is-large:not(.is-style-plain),
+        &.is-style-large:not(.is-style-plain),
+        &.has-text-align-right {
+            padding: 40px 15px 40px 15px;
+        }
+        cite {
+            font-size: 14px;
+            left: 20px;
+            &:before {
+                bottom: 6px;
+            }
+        }
+    }
+}
+.wp-block-pullquote__citation,
+.wp-block-pullquote cite,
+.wp-block-pullquote footer {
+    &::before {
+        bottom: 7px;
+    }
+}
+.has-cyan-bluish-gray-background-color {
+    blockquote,
+    .wp-block-quote {
+        background-color: $white-color;
+    }
+}
+
+@include sm {
+    .wp-block-pullquote.is-style-solid-color blockquote {
+        max-width: 90%;
+    }
+    blockquote,
+    .wp-block-quote {
+        cite {
+            font-size: 18px;
+            left: 30px;
+        }
+    }
+}
+
+@include xs {
+    .wp-block-quote.is-large:not(.is-style-plain) p,
+    .wp-block-quote.is-style-large:not(.is-style-plain) p {
+        font-size: 1.2em;
+    }
+}
+
+@include vxs {
+    blockquote,
+    .wp-block-quote {
+        cite {
+            font-size: 18px;
+            padding-left: 22px;
+            &:before {
+                width: 20px;
+            }
+        }
+    }
+}
+
+.blog-meta {
+    display: block;
+    span,
+    a {
+        display: inline-block;
+        font-size: 14px;
+        color: $body-color;
+        font-family: $body-font;
+        position: relative;
+        margin-right: 24px;
+        i {
+            margin-right: 6px;
+            color: $theme-color;
+        }
+        svg {
+            margin-right: 6px;
+            margin-top: -4px;
+        }
+        &:last-child {
+            margin-right: 0;
+        }
+    }
+    .author {
+        img {
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            margin-right: 6px;
+        }
+    }
+    a:hover {
+        color: $theme-color;
+    }
+}
+
+@include lg {
+    .blog-meta {
+        span,
+        a {
+            margin-right: 22px;
+        }
+    }
+}
+
+@include xs {
+    .blog-meta {
+        span,
+        a {
+            margin-right: 20px;
+            &:not(:last-child) {
+                padding-right: 0;
+                &:after {
+                    display: none;
+                }
+            }
+        }
+    }
+}
+
+.blog-audio,
+.blog-img,
+.blog-video {
+    line-height: 1px;
+    img {
+        transition: 0.4s ease-in-out;
+    }
+}
+
+.blog-title {
+    a {
+        color: inherit;
+
+        &:hover {
+            color: $theme-color;
+        }
+    }
+}
+
+.ot-blog {
+    margin-bottom: 30px;
+}
+
+.blog-inner-title {
+    margin-top: -0.25em;
+    margin-bottom: 25px;
+    i {
+        color: $theme-color;
+        margin-right: 4px;
+    }
+}
+
+
+.blog-single {
+    position: relative;
+    margin-bottom: 30px;
+    border-radius: 24px;
+    background: $smoke-color;
+    .blog-title {
+        margin-bottom: 15px;
+        font-size: 30px;
+        line-height: 1.25;
+    }
+    .blog-text {
+        margin-bottom: 32px;
+    }
+    .blog-meta {
+        margin: -0.25em 0 10px 0;
+    }
+    .blog-content {
+        margin: 0 0 0 0;
+        padding: 32px;
+        position: relative;
+        z-index: 2;
+        @include xs {
+            padding: 24px;
+        }
+        .ot-btn {
+            --body-bg: #f8f8f8;
+        }
+    }
+    .blog-audio {
+        line-height: 1;
+    }
+    .blog-audio,
+    .blog-img,
+    .blog-video {
+        position: relative;
+        overflow: hidden;
+        background-color: $smoke-color;
+        border-radius: 24px;
+        img {
+            @include sm {
+                min-height: 240px;
+                object-fit: cover;
+            }
+        }
+        &:hover {
+            img {
+                transform: scale(1.07);
+            }
+        }
+        .blog-cat {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            z-index: 3;
+            display: inline-block;
+            background-color: $theme-color;
+            color: $white-color;
+            line-height: 30px;
+            padding: 0 12px;
+            border-radius: 8px;
+            font-size: 14px;
+            &:hover {
+                background-color: $title-color;
+            }
+        }
+    }
+    .blog-img {
+        .slider-arrow {
+            --pos-x: 30px;
+        }
+        .play-btn {
+            --icon-size: 60px;
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            margin: calc(var(--icon-size) / -2) 0 0 calc(var(--icon-size) / -2);
+        }
+    }
+    .line-btn {
+        display: block;
+        max-width: fit-content;
+        margin-bottom: -1px;
+    }
+    .ot-btn {
+        padding: 17px 25px;
+        min-width: 165px;
+    }
+}
+
+.share-links-title {
+    font-size: 20px;
+    color: $title-color;
+    font-family: $title-font;
+    margin: 0 15px 0 0;
+    display: inline-block;
+    text-transform: capitalize;
+    font-weight: 700;
+}
+
+.share-links {
+    margin: 40px 0 0 0;
+    padding: 30px 0 0 0;
+    border-top: 1px solid rgba($color: #ffffff, $alpha: 0.24);
+
+    > .row {
+        align-items: center;
+        --bs-gutter-y: 15px;
+    }
+
+    .wp-block-tag-cloud,
+    .tagcloud {
+        gap: 16px;
+        a {
+            background: transparent;
+            border: 1px solid $theme-color;
+            padding: 9px 16px;
+            &:hover {
+                background: $theme-color;
+            }
+        }
+    }
+    .ot-social {
+        display: inline-block;
+    }
+}
+
+.blog-author {
+    margin-top: 40px;
+    margin-bottom: 40px;
+    display: flex;
+    background-color: $smoke-color;
+    border-radius: 20px;
+    overflow: hidden;
+    .auhtor-img {
+        width: 212px;
+        min-height: 100%;
+        background-color: #00ffff;
+        text-align: center;
+        display: grid;
+        align-content: center;
+        justify-content: center;
+        @include sm {
+            width: 100%;
+            min-height: 200px;
+        }
+        img {
+            width: 96px;
+            height: auto;
+            object-fit: cover;
+            object-position: center center;
+        }
+    }
+    .author-name {
+        font-size: 24px;
+        margin-top: -0.2em;
+        margin-bottom: 16px;
+    }
+    .author-text {
+        margin-bottom: 0;
+    }
+    .media-body {
+        padding: 40px 40px 40px 40px;
+        align-self: center;
+    }
+}
+
+@include sm {
+    .blog-author {
+        flex-direction: column;
+        .auhtor-img {
+            img {
+                width: 100%;
+            }
+        }
+    }
+}
+@include xs {
+    .blog-author .media-body {
+        padding: 35px 20px 30px 20px;
+    }
+}
+
+.blog-details {
+    .blog-content {
+        > p:last-child {
+            margin-bottom: 0;
+        }
+    }
+}
+.blog-content {
+    .wp-block-search .wp-block-search__input {
+        box-shadow: none;
+    }
+}
+
+@include ml {
+    .blog-single {
+        .blog-title {
+            font-size: 28px;
+            line-height: 1.4;
+        }
+    }
+    .share-links {
+        --blog-space-x: 20px;
+    }
+}
+
+@include lg {
+    .blog-single {
+        --blog-space-x: 20px;
+        --blog-space-y: 20px;
+    }
+}
+
+@include md {
+    .blog-single {
+        --blog-space-x: 40px;
+        --blog-space-y: 40px;
+    }
+    .share-links {
+        --blog-space-x: 40px;
+    }
+}
+
+@include sm {
+    .share-links {
+        --blog-space-x: 20px;
+    }
+
+    .blog-details .blog-single {
+        --blog-space-x: 20px;
+        --blog-space-y: 20px;
+    }
+
+    .blog-single {
+        --blog-space-x: 20px;
+        --blog-space-y: 20px;
+        .blog-title {
+            font-size: 24px;
+            line-height: 1.3;
+        }
+        .blog-text {
+            margin-bottom: 22px;
+        }
+        .blog-bottom {
+            padding-top: 15px;
+        }
+    }
+}
+
+@include xs {
+    .share-links-title {
+        margin: 0 15px 5px 0;
+    }
+}

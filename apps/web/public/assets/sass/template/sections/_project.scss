@@ -1,0 +1,105 @@
+/* Project Card ---------------------------------- */
+.project-slider1 {
+    margin-right: -374px;
+    @include ml {
+        margin-right: -100px;
+    }
+    @include xl {
+        margin-right: 0;
+    }
+    .swiper-slide {
+        &.swiper-slide-active {
+            .project-card {
+                &:after {
+                    opacity: 1;
+                }
+                .project-img {
+                    img {
+                        scale: 1.05;
+                    }
+                }
+                .project-content {
+                    opacity: 1;
+                    transform: translateY(0px);
+                }
+            }
+        }
+    }
+}
+.project-card {
+    border-radius: 24px;
+    position: relative;
+    overflow: hidden;
+    &:after {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(180deg, rgba(0, 9, 22, 0.2) 40.92%, rgba(0, 9, 22, 0.95) 89.44%);
+        transition: 0.4s;
+        opacity: 0;
+    }
+    .project-img {
+        img {
+            width: 100%;
+            border-radius: inherit;
+            transition: 0.4s;
+        }
+    }
+    .project-content {
+        position: absolute;
+        inset: 0;
+        top: auto;
+        z-index: 1;
+        padding: 24px;
+        transition: 0.4s;
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    .project-subtitle {
+        font-size: 16px;
+        font-weight: 400;
+        color: $theme-color;
+        margin-bottom: 8px;
+    }
+    .box-title {
+        font-size: 20px;
+        font-weight: 700;
+        border-bottom: 1px solid rgba($color: #ffffff, $alpha: 0.3);
+        padding-bottom: 8px;
+        margin-bottom: 8px;
+    }
+    .link-btn {
+        font-weight: 400;
+        i {
+            transition: 0.2s;
+        }
+    }
+    &:hover {
+        &:after {
+            opacity: 1;
+        }
+        .project-img {
+            img {
+                scale: 1.05;
+            }
+        }
+        .project-content {
+            opacity: 1;
+            transform: translateY(0px);
+        }
+    }
+    @include xs {
+        &:after {
+            opacity: 1;
+        }
+        .project-img {
+            img {
+                scale: 1.05;
+            }
+        }
+        .project-content {
+            opacity: 1;
+            transform: translateY(0px);
+        }
+    }
+}

@@ -1,0 +1,682 @@
+/* Hero Global ---------------------------------- */
+.ot-hero-wrapper {
+    position: relative;
+    z-index: 2;
+}
+
+.ot-hero-bg {
+    position: absolute;
+    inset: 0;
+    img {
+        height: 100%;
+        width: 100%;
+        object-fit: cover;
+    }
+}
+/* Hero 1 ---------------------------------- */
+.hero-1 {
+    --main-container: 1520px;
+    padding-top: 100px;
+    overflow: hidden;
+    position: relative;
+    .hero-thumb1-1 {
+        position: relative;
+        z-index: 7;
+        margin-right: -300px;
+        margin-bottom: -260px;
+        @include xxl {
+            margin-right: -150px;
+        }
+        @include lg {
+            margin: 120px 100px 40px;
+        }
+        @include md {
+            margin: 120px 0 40px;
+        }
+        @include xs {
+            margin: 100px 0 40px;
+        }
+    }
+    .hero-shadow-text {
+        position: absolute;
+        line-height: 0.8;
+        top: 140px;
+        z-index: -2;
+        left: 180px;
+        .shadow-text {
+            letter-spacing: 0.22em;
+            text-transform: uppercase;
+            font-weight: 700;
+            font-size: 220px;
+            color: transparent;
+            -webkit-text-stroke-color: transparent;
+            -webkit-text-stroke-width: 3px;
+            -webkit-text-fill-color: $body-background;
+            background-image: linear-gradient($theme-color,transparent 80%);
+            background-clip: text;
+            opacity: 0.3;
+        }
+        @include hd {
+            left: 490px;
+        }
+        @include xxl {
+            left: 10px;
+            .shadow-text {
+                font-size: 180px;
+            }
+        }
+        @include lg {
+            left: 0;
+            right: 0;
+            display: block;
+            text-align: center;
+            .shadow-text {
+                letter-spacing: 0.1em;
+                font-size: 150px;
+            }
+        }
+        @include md {
+            .shadow-text {
+                font-size: 120px;
+            }
+        }
+        @include sm {
+            .shadow-text {
+                font-size: 100px;
+            }
+        }
+        @include xs {
+            .shadow-text {
+                font-size: 60px;
+            }
+        }
+    }
+    .bg-gradient-shape1 {
+        width: 266px;
+        height: 266px;
+        background: $theme-color;
+        opacity: 0.5;
+        filter: blur(175px);
+        top: 288px;
+        left: 136px;
+        &:before {
+            width: 231px;
+            height: 231px;
+        }
+        &:after {
+            width: 231px;
+            height: 231px;
+            background: $theme-color;
+        }
+    }
+    .bg-gradient-shape2 {
+        position: absolute;
+        width: 1041.85px;
+        height: 1003px;
+        background: conic-gradient(from 196.2deg at 50% 50%, #3C72FC 0deg, #E0009B 201.14deg, #3F063B 228.25deg, #000916 313.17deg, #069845 360deg);
+        opacity: 0.3;
+        filter: blur(175px);
+        backdrop-filter: blur(50.1px);
+        transform: matrix(-0.5, -0.87, -0.87, 0.5, 0, 0);
+        right: 250px;
+        z-index: -1;
+    }
+}
+.hero-title {
+    font-size: 84px;
+    font-weight: 700;
+    line-height: 1.3333;
+    margin-bottom: 31px;
+    margin-top: -0.25em;
+    .title1,
+    .title2 {
+        display: block;
+        max-width: fit-content;
+        position: relative;
+        span {
+            color: $theme-color;
+        }
+    }
+}
+.hero-text {
+    margin-bottom: 42px;
+}
+
+.watch-btn {
+    .text {
+        font-weight: 500;
+        color: $title-color;
+        margin-left: 20px;
+    }
+    &:hover {
+        .text {
+            color: $theme-color;
+        }
+    }
+}
+
+.hero-style1 {
+    position: relative;
+    z-index: 9;
+    padding: 240px 0;    
+    .hero-title {
+        margin-bottom: 18px;
+    }
+    .hero-text {
+        max-width: 678px;
+    }
+    .newsletter-form {
+        background: $body-background;
+        position: relative;
+        border-radius: 30px;
+        z-index: 1;
+        max-width: 635px;
+        &:after {
+            content: "";
+            position: absolute;
+            inset: 0;
+            padding: 2px;
+            border-radius: inherit;
+            background: linear-gradient(-30deg, $theme-color2, $theme-color 80%);
+            -webkit-mask: linear-gradient(white, white) content-box, linear-gradient(white, white);
+            -webkit-mask-composite: xor;
+            mask-composite: exclude;
+            z-index: -1;
+        }
+        .form-group {
+            margin-bottom: 0;
+            width: 100%;
+            input {
+                border: 0;
+            }
+        }
+        .ot-btn {
+            flex: none;
+            padding: 18px 20px;
+            margin-right: 4px;
+            min-height: 54px;
+        }
+        @include xs {
+            background: transparent;
+            display: block;
+            &:after {
+                display: none;
+            }
+            .form-group {
+                background: $body-background;
+                border-radius: 30px;
+                z-index: 1;
+                margin-bottom: 20px;
+                &:after {
+                    content: "";
+                    position: absolute;
+                    inset: 0;
+                    padding: 1px;
+                    border-radius: inherit;
+                    background: linear-gradient(-30deg, $theme-color2, $theme-color 80%);
+                    -webkit-mask: linear-gradient(white, white) content-box, linear-gradient(white, white);
+                    -webkit-mask-composite: xor;
+                    mask-composite: exclude;
+                    z-index: -1;
+                }
+            }
+
+        }
+    }
+    .btn-wrap {
+        .video-arrow {
+            color: $white-color;
+            position: absolute;
+            right: 0;
+            margin-top: -50px;
+            transform: rotate(10deg);
+            @include xxl {
+                display: none;
+            }
+        }
+        .play-btn {
+            position: absolute;
+            right: -80px;
+            margin-bottom: -140px;
+            @include xl {
+                margin-bottom: 0;
+                margin-top: -310px;
+            }
+            @include lg {
+                right: 50%;
+                transform: translate(50%, 0);
+                top: -105px;
+            }
+            @include sm {
+                top: -120px;
+            }
+            @include xs {
+                top: -245px;
+            }
+            @include vxs {
+                top: -265px;
+            }
+            @media (max-width: 320px) {
+                top: -280px;
+            }
+        }
+    }
+}
+
+
+@include xxl {
+    .hero-title {
+        font-size: 64px;
+    }
+    .hero-style1 {
+        padding: 155px 0;
+    }
+}
+@include ml {
+    .hero-style1 {
+        padding: 155px 0 155px 80px;
+    }
+    .hero-title {
+        font-size: 60px;
+    }
+}
+@include xl {
+    .hero-style1 {
+        padding: 120px 0 120px 80px;
+    }
+    .hero-title {
+        font-size: 50px;
+    }
+}
+@include lg {
+    .hero-title {
+        font-size: 46px;
+    }
+    .hero-style1 {
+        padding: 0px 0 100px;
+        text-align: center;
+        .hero-title {
+            .title1,
+            .title2 {
+                max-width: none;
+            }
+        }
+        .hero-text {
+            margin-left: auto;
+            margin-right: auto;
+        }
+        .newsletter-form {
+            margin-left: auto;
+            margin-right: auto;
+        }
+    }
+}
+
+@include md {
+    .hero-style1 {
+        text-align: center;
+        max-width: 100%;
+        .title1,
+        .title2 {
+            margin-left: auto;
+            margin-right: auto;
+        }
+        .hero-text {
+            margin-left: auto;
+            margin-right: auto;
+        }
+        .btn-group {
+            justify-content: center;
+        }
+    }
+}
+
+@include xs {
+    .hero-title {
+        font-size: 40px;
+        line-height: 1.24;
+        margin-bottom: 35px;
+    }
+    .hero-style1 {
+        .hero-title {
+            margin-bottom: 35px;
+        }
+    }
+}
+
+@media (max-width: 390px) {
+    .hero-title {
+        font-size: 36px;
+        line-height: 1.3;
+    }
+}
+
+@media (max-width: 330px) {
+    .hero-title {
+        font-size: 32px;
+    }
+}
+
+
+/* Hero 2 --------------------------------------*/
+.hero-2 {
+    overflow: hidden;
+    position: relative;
+    background: linear-gradient(187.52deg, #00237D -0.43%, #08044E 52.34%);
+    .waves {
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        line-height: 1;
+    }
+    .hero-bg-line1 {
+        position: absolute;
+        left: 0;
+        top: 0;
+        right: 0;
+        bottom: 0;
+        width: 100%;
+        height: 100%;
+        z-index: -1;
+        overflow: hidden;
+        display: flex;
+        justify-content: space-around;
+        .line {
+            position: relative;
+            width: 1px;
+            height: 100%;
+            display: block;
+            --anim-time: 10s;
+            opacity: 0.4;
+            &:before {
+                content: '';
+                position: absolute;
+                top: -300px;
+                left: 0;
+                width: 2px;
+                height: 300px;
+                background: linear-gradient(0deg, $theme-color 0%, rgba(86, 50, 153, 0) 100%);
+                animation: gridanim var(--anim-time) linear infinite;
+            }
+            &:after {
+                content: '';
+                width: 12px;
+                height: 12px;
+                border-radius: 50%;
+                position: absolute;
+                top: 0;
+                background: linear-gradient(104.33deg, $theme-color 15.64%, $theme-color2 139.11%);
+                animation: gridanim var(--anim-time) linear infinite;
+                margin-left: -5px;
+                margin-top: 300px;
+                opacity: 0;
+
+            }
+            ~ .line {
+                &:before {
+                    animation-delay: 0.5s;
+                }
+                &:after {
+                    animation-delay: 0.5s;
+                }
+                ~ .line {
+                    &:before {
+                        animation-delay: 0s;
+                    }
+                    &:after {
+                        animation-delay: 0s;
+                    }
+                    ~ .line {
+                        &:before {
+                            animation-delay: 1s;
+                        }
+                        &:after {
+                            animation-delay: 1s;
+                        }
+                        ~ .line {
+                            &:before {
+                                animation-delay: 0.5s;
+                            }
+                            &:after {
+                                animation-delay: 0.5s;
+                            }
+                            ~ .line {
+                                &:before {
+                                    animation-delay: 1.5s;
+                                }
+                                &:after {
+                                    animation-delay: 1.5s;
+                                }
+                                ~ .line {
+                                    &:before {
+                                        animation-delay: 0.5s;
+                                    }
+                                    &:after {
+                                        animation-delay: 0.5s;
+                                    }
+                                    ~ .line {
+                                        &:before {
+                                            animation-delay: 1s;
+                                        }
+                                        &:after {
+                                            animation-delay: 1s;
+                                        }
+                                        ~ .line {
+                                            &:before {
+                                                animation-delay: 1.5s;
+                                            }
+                                            &:after {
+                                                animation-delay: 1.5s;
+                                            }
+                                            ~ .line {
+                                                &:before {
+                                                    animation-delay: 0s;
+                                                }
+                                                &:after {
+                                                    animation-delay: 0s;
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    .hero-bg-line2 {
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        width: 94%;
+        height: 100%;
+        z-index: -1;
+        overflow: hidden;
+        display: flex;
+        justify-content: space-around;
+        margin-left: auto;
+        margin-right: auto;
+        @include md {
+            display: none;
+        }
+        .line {
+            position: relative;
+            width: 1px;
+            height: 100%;
+            display: block;
+            --anim-time: 10s;
+            --theme-color: #03E2E6;
+            opacity: 0.7;
+            &:before {
+                content: '';
+                position: absolute;
+                bottom: -300px;
+                left: 0;
+                width: 2px;
+                height: 300px;
+                background: linear-gradient(180deg, $theme-color 0%, rgba(86, 50, 153, 0) 100%);
+                animation: gridanim2 var(--anim-time) linear infinite;
+            }
+            &:after {
+                content: '';
+                width: 12px;
+                height: 12px;
+                border-radius: 50%;
+                position: absolute;
+                bottom: 0;
+                background: $theme-color;
+                animation: gridanim2 var(--anim-time) linear infinite;
+                margin-left: -5px;
+                margin-bottom: 300px;
+                opacity: 0;
+
+            }
+            ~ .line {
+                &:before {
+                    animation-delay: 0.5s;
+                }
+                &:after {
+                    animation-delay: 0.5s;
+                }
+                ~ .line {
+                    &:before {
+                        animation-delay: 0s;
+                    }
+                    &:after {
+                        animation-delay: 0s;
+                    }
+                    ~ .line {
+                        &:before {
+                            animation-delay: 1s;
+                        }
+                        &:after {
+                            animation-delay: 1s;
+                        }
+                        ~ .line {
+                            &:before {
+                                animation-delay: 0.5s;
+                            }
+                            &:after {
+                                animation-delay: 0.5s;
+                            }
+                            ~ .line {
+                                &:before {
+                                    animation-delay: 1.5s;
+                                }
+                                &:after {
+                                    animation-delay: 1.5s;
+                                }
+                                ~ .line {
+                                    &:before {
+                                        animation-delay: 0.5s;
+                                    }
+                                    &:after {
+                                        animation-delay: 0.5s;
+                                    }
+                                    ~ .line {
+                                        &:before {
+                                            animation-delay: 1s;
+                                        }
+                                        &:after {
+                                            animation-delay: 1s;
+                                        }
+                                        ~ .line {
+                                            &:before {
+                                                animation-delay: 1.5s;
+                                            }
+                                            &:after {
+                                                animation-delay: 1.5s;
+                                            }
+                                            ~ .line {
+                                                &:before {
+                                                    animation-delay: 0s;
+                                                }
+                                                &:after {
+                                                    animation-delay: 0s;
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+@keyframes gridanim {
+    0% {
+        top: -300px;
+        opacity: 1;
+    }
+    100% {
+        top: 100%;
+        opacity: 1;
+    }
+}
+@keyframes gridanim2 {
+    0% {
+        bottom: -300px;
+        opacity: 1;
+    }
+    100% {
+        bottom: 100%;
+        opacity: 1;
+    }
+}
+.hero-style2 {
+    padding: 196px 0 500px;
+    @include ml {
+        padding: 170px 0 400px;
+    }
+    @include lg {
+        padding: 150px 0 300px;
+    }
+    @include md {
+        padding: 130px 0;
+    }
+    @include xs {
+        padding: 100px 0;
+    }
+    .hero-title {
+        margin-bottom: 14px;
+        span {
+            max-width: none;
+            @include sm {
+                display: inline-block !important;
+                max-width: none !important;
+            }
+        }
+    }
+    .hero-text {
+        max-width: 921px;
+        margin-left: auto;
+        margin-right: auto;
+        font-size: 20px;
+        font-weight: 500;
+        color: $title-color;
+        @include md {
+            font-size: 16px;
+        }
+    }
+    .video-btn-wrap {
+        font-size: 16px;
+        font-weight: 700;
+        color: $title-color;
+        .play-btn {
+            margin-right: 15px;
+            &:after,
+            &:before {
+                display: none;
+            }
+        }
+        &:hover {
+            color: $theme-color;
+        }
+    }
+}

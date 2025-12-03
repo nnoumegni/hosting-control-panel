@@ -1,0 +1,242 @@
+/* Category 1---------------------------------- */
+.category-card {
+    text-align: center;
+    .box-img {
+        position: relative;
+        padding: 46px 0;
+        margin-bottom: 24px;
+        display: block;
+        &:after {
+            position: absolute;
+            content: "";
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: $theme-color;
+            opacity: 0.15;
+            border-radius: 62% 47% 82% 35% / 45% 45% 80% 66%;
+            will-change: border-radius, transform, opacity;
+            animation: heroMorph 5s linear infinite;
+            display: block;
+            z-index: -1;
+        }
+    }
+    .box-title {
+        font-size: 18px;
+        font-weight: 700;
+        margin-bottom: -0.15em;
+    }
+}
+@keyframes heroMorph {
+    0%, 100%{
+    border-radius: 42% 58% 70% 30% / 45% 45% 55% 55%;
+        transform: translate3d(0,0,0) rotateZ(0.01deg);
+    }
+    34% {
+        border-radius: 70% 30% 46% 54% / 30% 29% 71% 70%;
+        transform:  translate3d(0,5px,0) rotateZ(0.01deg);
+    }
+    50% {
+        transform: translate3d(0,0,0) rotateZ(0.01deg);
+    }
+    67% {
+        border-radius: 100% 60% 60% 100% / 100% 100% 60% 60% ;
+        transform: translate3d(0,-3px,0) rotateZ(0.01deg);
+    }
+}
+/* Category 2---------------------------------- */
+.category-card2 {
+    text-align: center;
+    position: relative;
+    .box-img-border {
+        position: absolute;
+        inset: 7px;
+        background: $theme-color;
+        mask-image: url('data:image/svg+xml,<svg width="245" height="245" viewBox="0 0 245 245" preserveAspectRatio="none" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M55.4594 57.0913C-20.5395 31.4879 -2.42148 119.432 16.8536 171.884C7.76644 215.623 39.282 228.67 55.4594 230.448C75.2849 254.984 102.39 240.671 115.47 230.448C146.861 259.251 168.989 239.085 175.873 223.083C215.524 242.286 224.805 202.999 222.74 171.884C267.348 167.617 233.786 85.5357 217.785 63.9993C224.393 -6.41009 163.538 4.63992 129.807 22.4201C78.59 -30.9203 58.9015 23.3091 55.4594 57.0913Z" fill="%23D9D9D9"/></svg>');
+        mask-size: 100% 100%;
+        z-index: -1;
+    }
+    .box-img {
+        position: relative;
+        padding: 0 0 0;
+        margin-bottom: 24px;
+        display: inline-block;
+        mask-image: url('data:image/svg+xml,<svg width="245" height="245" viewBox="0 0 245 245" preserveAspectRatio="none" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M55.4594 57.0913C-20.5395 31.4879 -2.42148 119.432 16.8536 171.884C7.76644 215.623 39.282 228.67 55.4594 230.448C75.2849 254.984 102.39 240.671 115.47 230.448C146.861 259.251 168.989 239.085 175.873 223.083C215.524 242.286 224.805 202.999 222.74 171.884C267.348 167.617 233.786 85.5357 217.785 63.9993C224.393 -6.41009 163.538 4.63992 129.807 22.4201C78.59 -30.9203 58.9015 23.3091 55.4594 57.0913Z" fill="%23D9D9D9"/></svg>');
+        mask-size: 100% 100%;
+        z-index: 1;
+        img {
+            transition: 0.4s;
+        }
+        &:after {
+            position: absolute;
+            content: "";
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: $theme-color;
+            display: block;
+            z-index: -2;
+        }
+    }
+    .box-title {
+        font-size: 18px;
+        font-weight: 700;
+        margin-bottom: -0.15em;
+    }
+    &:hover {
+        .box-img {
+            img {
+                transform: scale(1.1);
+            }
+        }
+    }
+}
+// category wrap 3---------------------------------------
+.category-wrap3 {
+    border: 2px dashed $theme-color;
+    border-radius: 30px;
+    margin-top: 15px;
+    padding: 0 20px 50px;
+    .title-area {
+        margin-top: -15px;
+    }
+    .sec-title {
+        background: $white-color;
+        display: inline-block;
+        padding: 0px 16px;
+        margin-bottom: 15px;
+    }
+}
+.category-slider3 {
+    --pos-x: -50px;
+}
+.category-card3 {
+    text-align: center;
+    .box-img {
+        position: relative;
+        padding: 40px;
+        margin-bottom: 30px;
+        display: inline-block;
+        max-width: 245px;
+        img {
+            transition: 0.4s;
+        }
+        .box-img-border {
+            position: absolute;
+            inset: 0;
+            background: $theme-color;
+            border-radius: 50%;
+            z-index: -2;
+        }
+        &:before {
+            position: absolute;
+            content: "";
+            inset: 10px;
+            background: $theme-color;
+            display: block;
+            z-index: -1;
+            border-radius: 50%;
+        }
+    }
+    .box-title {
+        font-size: 18px;
+        font-weight: 700;
+        margin-bottom: -0.15em;
+    }
+    &:hover {
+        .box-img {
+            &:before {
+                animation: spin 25s linear infinite;
+            }
+        }
+    }
+}
+// category wrap 4---------------------------------------
+.category-slider4 {
+    --pos-x: -50px;
+}
+.category-card4 {
+    text-align: center;
+    .box-img {
+        position: relative;
+        padding: 0px;
+        margin-bottom: 30px;
+        display: inline-block;
+        max-width: 245px;
+        img {
+            transition: 0.4s;
+            position: relative;
+            z-index: 2;
+        }
+        &:after {
+            position: absolute;
+            content: "";
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: $theme-color;
+            display: block;
+            z-index: -1;
+            border-radius: 50%;
+        }
+        &:before {
+            position: absolute;
+            content: "";
+            inset: 10px;
+            border: 1px dashed $white-color;
+            background: transparent;
+            display: block;
+            z-index: 1;
+            border-radius: 50%;
+        }
+    }
+    .box-title {
+        font-size: 18px;
+        font-weight: 700;
+        margin-bottom: -0.15em;
+    }
+    &:hover {
+        .box-img {
+            &:before {
+                animation: spin 25s linear infinite;
+            }
+        }
+    }
+}
+// category wrap 5---------------------------------------
+.category-wrap5 {
+    border: 2px dashed $theme-color;
+    border-radius: 30px;
+    margin-top: 15px;
+    padding: 0 20px 50px;
+    .title-area {
+        margin-top: -15px;
+    }
+    .sec-title {
+        display: inline-block;
+        padding: 0px 16px;
+        margin-bottom: 15px;
+    }
+}
+.category-slider5 {
+    --pos-x: -50px;
+}
+.category-card3.style2 {
+    .box-img {
+        &:after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: $theme-color;
+            opacity: 0.15;
+            border-radius: 50%;
+        }
+        &:before {
+            background: transparent;
+            border: 1px dashed $theme-color;
+        }
+    }
+}

@@ -1,0 +1,67 @@
+//---------------------------------------
+.cta-thumb1-1 {
+    position: relative;
+    z-index: 1;
+    display: inline-block;
+    margin-right: -68px;
+    margin-bottom: -120px;
+    margin-top: -47px;
+    @include xl {
+        margin-right: 0;
+    }
+    @include lg {
+        margin-top: 0;
+    }
+    @include md {
+        margin-bottom: -80px;
+    }
+    .ripple-1, 
+    .ripple-2, 
+    .ripple-3, 
+    .ripple-4, 
+    .ripple-5, 
+    .ripple-6, 
+    .ripple-7, 
+    .ripple-8, 
+    .ripple-9 {
+        width: 400px;
+        height: 400px;
+        position: absolute;
+        margin-left: -200px;
+        left: 50%;
+        bottom: -100px;
+        background-color: transparent;
+        border: 1px solid rgba(87, 88, 95, 0.3);
+        border-radius: 50%;
+        animation: ripple2 8s linear infinite;
+        opacity: 0;
+        z-index: -1;
+    }
+    .ripple-1 {
+        animation-delay: 0;
+    }
+    .ripple-2 {
+        animation-delay: 1s;
+    }
+    .ripple-3 {
+        animation-delay: 2s;
+    }
+    .ripple-4 {
+        animation-delay: 3s;
+    }
+    .ripple-5 {
+        animation-delay: 4s;
+    }
+    .ripple-6 {
+        animation-delay: 5s;
+    }
+    .ripple-7 {
+        animation-delay: 6s;
+    }
+    .ripple-8 {
+        animation-delay: 7s;
+    }
+    .ripple-9 {
+        animation-delay: 8s;
+    }
+}

@@ -1,0 +1,232 @@
+
+.footer-widget {
+    margin-bottom: 50px;
+
+    &,
+    .widget {
+        padding: 0;
+        border: none;
+        padding-bottom: 0;
+        background-color: transparent;
+        box-shadow: none;
+    }
+    
+    .form-group {
+        > i {
+            color: $theme-color;
+            top: 18px;
+        }
+    }
+
+    .sidebar-gallery {
+        max-width: 287px;
+        gap: 11px;
+        .gallery-thumb {
+            border-radius: 5px;
+        }
+    }
+
+    .widget_title {
+        max-width: 270px;
+        color: $white-color;
+        font-weight: 600;
+        text-transform: capitalize;
+        margin-bottom: 36px;
+    }
+
+    &.widget_meta,
+    &.widget_pages,
+    &.widget_archive,
+    &.widget_categories,
+    &.widget_nav_menu {
+        ul {
+            margin-top: -4px;
+        }
+        .menu,
+        > ul {
+            margin-bottom: -4px;
+        }
+
+        a {
+            font-size: 16px;
+            font-weight: 500;
+            padding: 0;
+            margin-bottom: 18px;
+            font-family: $body-font;
+            color: $body-color;
+            display: block;
+            max-width: 100%;
+            width: max-content;
+            padding-right: 0;
+            padding-left: 21px;
+            border: none;
+            background-color: transparent;
+            border-bottom: none;
+            position: relative;
+            &:before {
+                content: '\f324';
+                top: 1px;
+                left: 0;
+                font-weight: 400;
+                font-size: 0.92em;
+            }
+            &:hover {
+                background-color: transparent;
+                color: $title-color;
+            }
+        }
+
+        li {
+            > span {
+                @include equal-size(auto);
+                position: relative;
+                background-color: transparent;
+                color: $body-color;
+                line-height: 1;
+            }
+
+            &:last-child {
+                a {
+                    margin-bottom: 0;
+                }
+            }
+        }
+    }
+    .recent-post {
+        max-width: 300px;
+        margin-bottom: 20px;
+        .media-img {
+            max-width: 65px;
+            border-radius: 12px;
+            &:after {
+                line-height: 74px;
+            }
+        }
+        .post-title {
+            font-size: 18px;
+            color: $white-color;
+            font-weight: 500;
+        }
+        &:last-child {
+            margin-bottom: 0;
+            padding-bottom: 0;
+            border-bottom: 0;
+        }
+		.recent-post-meta {
+            a {
+                color: $white-color;
+                font-weight: 400;
+                line-height: 1.2;
+            }
+			i {
+				margin-right: 8px;
+                color: $white-color;
+			}
+			a:hover {
+                color: $theme-color;
+				i {
+					color: $theme-color;
+				}
+			}
+		}
+    }
+    .sidebar-gallery {
+        max-width: 250px;
+    }
+}
+.about-logo {
+    margin-bottom: 15px;
+}
+.ot-widget-about {
+    max-width: 268px;
+    .about-logo {
+        margin-bottom: 38px;
+    }
+    .about-text {
+        margin-bottom: 32px;
+        margin-top: -0.5em;
+    }
+}
+
+.footer-text {
+    margin-top: -0.45em;
+    margin-bottom: 25px;
+}
+.social-box {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    .social-title {
+        font-size: 20px;
+        color: $white-color;
+        font-weight: 600;
+        margin-right: 20px;
+        margin-bottom: 0;
+    }
+}
+.icon-group {
+    a {
+        color: $white-color;
+        font-size: 18px;
+        margin-right: 17px;
+        &:last-child {
+            margin-right: 0;
+        }
+    }
+}
+.ot-widget-contact {
+    max-width: 317px;
+    .info-box {
+        gap: 16px;
+        .box-icon {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            border: 1px solid rgba($color: #ffffff, $alpha: 0.24);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: transparent;
+            color: $theme-color;
+            flex: none;
+            font-size: 20px;
+        }
+        .box-subtitle {
+            font-size: 14px;
+            font-weight: 500;
+            font-family: $title-font;
+        }
+        .box-title {
+            color: $theme-color;
+            font-size: 18px;
+            font-weight: 600;
+            word-break: break-all;
+            margin-bottom: 5px;
+        }
+        .box-text {
+            color: $body-color;
+            line-height: 1.625;
+        }
+        .box-link {
+            color: $body-color;
+            line-height: 1.625;
+            &:hover {
+                color: $title-color;
+            }
+        }
+    }
+}
+
+@include sm {
+    .footer-widget {
+        .widget_title {
+            margin-bottom: 35px;
+        }
+    }
+    .ot-widget-about .about-text {
+        margin-bottom: 20px;;
+    }
+    .social-box.mb-30 {
+        margin-bottom: 25px;
+    }
+}

@@ -1,0 +1,207 @@
+/* Gallery Card -------------------------------*/
+.gallery-card {
+    @include sm {
+        margin-left: 12px;
+        margin-right: 12px;
+    }
+    .box-img {
+        position: relative;
+        z-index: 2;
+        border-radius: 15px;
+        overflow: hidden;
+        img {
+            width: 100%;
+        }
+        &:after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: 15px;
+            background-color: $theme-color;
+            opacity: 0;
+            transition: 0.4s ease;
+        }
+    }
+    .icon-btn {
+        font-size: 18px;
+        position: absolute;
+        top: calc(50% - 27.5px);  
+        left: calc(50% - 27.5px);
+        z-index: 3;
+        transform: scale(0);
+        background-color: $white-color;
+        color: $theme-color;
+        &:hover {
+            background-color: $title-color;
+        }
+    }
+    .box-content {
+        padding: 70px 50px 70px 70px;
+        position: absolute;
+        left: 0;
+        bottom: 0;
+        z-index: 3;
+        transition: 0.4s ease-in-out;
+        visibility: hidden;
+        opacity: 0;
+        transform: translateY(40px);
+        @include xxl {
+            padding: 60px 50px 60px 60px;
+        }
+        @include xs {
+            padding: 60px 50px 50px 60px;
+        }
+    }
+    .box-title {
+        margin-bottom: 0;
+        color: $white-color;
+        margin-bottom: -0.34em;
+        a:hover {
+            color: $title-color;
+        }
+    }
+    .box-subtitle {
+        font-size: 14px;
+        font-weight: 600;
+        text-transform: uppercase;
+        color: $white-color;
+    }
+    &:hover {
+        .box-img {
+            &:after {
+                opacity: 0.85;
+                inset: 30px;
+                @include xs {
+                    inset: 20px;
+                }
+            }
+        }
+        .box-content {
+            transform: translateY(0);
+            visibility: visible;
+            opacity: 1;
+        }
+        .icon-btn {
+            transform: scale(1);
+        }
+    }
+    &.style2 {
+        .box-img {
+            img {
+                min-height: 250px;
+                object-fit: cover;
+            }
+        }
+        .box-content {
+            padding: 40px 20px 32px 40px;
+        }
+        &:hover {
+            .box-img {
+                &:after {
+                    inset: 0;
+                    @include xs {
+                        inset: 0;
+                    }
+                }
+            }
+        }
+    }
+}
+
+#gallerySlider1 {
+    .swiper-slide-active {
+        .gallery-card {
+            .box-img {
+                &:after {
+                    opacity: 0.85;
+                    inset: 30px;
+                    @include xs {
+                        inset: 20px;
+                    }
+                }
+            }
+            .box-content {
+                transform: translateY(0);
+                visibility: visible;
+                opacity: 1;
+            }
+            .icon-btn {
+                transform: scale(1);
+            }
+        }
+    }
+}
+
+/* Project Details --------------------*/
+.project-meta {
+    &-wrap {
+        margin-top: 43px;
+        margin-bottom: 60px;
+        padding: 40px 0;
+        border-top: 1px solid $border-color;
+        border-bottom: 1px solid $border-color;
+        @include lg {
+            margin-top: 28px;
+            margin-bottom: 45px;
+        }
+    }
+    display: flex;
+    align-items: center;
+    gap: 25px;
+    .icon-btn {
+        --btn-size: 70px;
+        font-size: 22px;
+    }
+    .box-text {
+        margin-bottom: 10px;
+        margin-top: -0.4em;
+    }
+    .box-title {
+        font-size: 18px;
+        line-height: 26px;
+        font-weight: 500;
+        margin-bottom: -0.34em;
+        max-width: 210px;
+    }
+}
+.project-details {
+    .page-tags {
+        margin-top: -0.5em;
+        margin-bottom: 4px;
+        a {
+            font-size: 14px;
+            font-weight: 500;
+            text-transform: uppercase;
+            color: $body-color;
+            &:hover {
+                color: $theme-color;
+            }
+        }
+    }
+    .page-img {
+        border-radius: 30px;
+        margin-bottom: 60px;
+        @include lg {
+            border-radius: 15px;
+            margin-bottom: 45px;
+        }
+        @include sm {
+            border-radius: 10px;
+        }
+    }
+    .page-title {
+        font-size: 60px;
+        @include lg {
+            font-size: 48px;
+        }
+        @include md {
+            font-size: 40px;
+        }
+        @include sm {
+            font-size: 34px;
+        }
+        @include xs {
+            font-size: 30px;
+        }
+    }
+}

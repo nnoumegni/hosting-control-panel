@@ -1,0 +1,39 @@
+/* Brand 1 ---------------------------------- */
+.brand-card {
+    display: grid;
+    justify-content: center;
+    align-items: center;
+}
+/* Brand 2 ---------------------------------- */
+.brand-card2 {
+    text-align: center;
+    display: block;
+    background: $theme-color;
+    border-radius: 30px;
+    padding: 45px 15px 15px;
+    img {
+        min-height: 70px;
+    }
+    .box-title {
+        color: $theme-color;
+        border-radius: 16px;
+        font-size: 16px;
+        font-weight: 700;
+        padding: 30px 20px;
+        position: relative;
+        margin-bottom: 0;
+        z-index: 1;
+        margin-top: 40px;
+        border: 1px dashed $theme-color;
+        transition: 0.4s;
+        background: $white-color;
+    }
+    &:hover {
+        .box-title {
+            color: $title-color;
+            &:after {
+                opacity: 1;
+            }
+        }
+    }
+}

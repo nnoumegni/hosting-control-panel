@@ -1,0 +1,276 @@
+/* Service Card ---------------------------------- */
+.service-card {
+    background-color: $smoke-color;
+    position: relative;
+    z-index: 2;
+    padding: 24px;
+    border-radius: 24px;
+    transition: 0.4s ease-in-out;
+    overflow: hidden;
+    &:after,
+    &:before {
+        content: '';
+        position: absolute;
+        width: 80px;
+        height: 80px;
+        border-radius: 50%;
+        background: $theme-color;
+        opacity: 0.05;
+        transition: 0.4s;
+    }
+    &:after {
+        right: -6px;
+        top: -36px;
+    }
+    &:before {
+        top: -6px;
+        right: -36px;
+    }
+    .box-icon {
+        margin-bottom: 32px;
+        color: $theme-color;
+        height: 60px;
+        transition: 0.4s;
+        display: inline-block;
+    }
+    .box-title {
+        margin-bottom: 13px;
+        font-size: 20px;
+        font-weight: 700;
+        a {
+            background-image: linear-gradient(to left, $white-color, $white-color);
+            background-repeat: no-repeat;
+            background-position: bottom left;
+            background-size: 0 2px;
+            &:hover {
+                color: $white-color;
+                background-size: 100% 2px;
+            }
+        }
+    }
+    .box-text {
+        margin-bottom: 20px;
+        line-height: 1.625em;
+        transition: 0.4s;
+    }
+    .link-btn {
+        font-size: 16px;
+        font-weight: 600;
+        display: inline-block;
+        margin-bottom: -0.45em;
+        background: linear-gradient(-30deg, $theme-color2, $theme-color);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        &:before {
+            background: linear-gradient(0deg, $theme-color2, $theme-color);
+            width: calc(100% - 23px);
+            height: 1px;
+        }
+        i {
+            transition: 0.4s ease-in-out;
+            font-size: 16px;
+            &:hover {
+                transform: rotate(-315deg);
+            }
+        }
+    }
+    &:hover {
+        background: $theme-color;
+        &:after,
+        &:before {
+            background: $white-color;
+            opacity: 0.1;
+        }
+        .box-icon {
+            color: $white-color;
+            transform: scale(-1) rotate(180deg);
+        }
+        .box-text {
+            color: $white-color;
+        }
+        .link-btn {
+            color: $white-color;
+            -webkit-text-fill-color: $white-color;
+            &:before {
+                background: $white-color;
+            }
+            &:hover {
+                &:before {
+                    width: 100%;
+                }
+            }
+        }
+    }
+}
+
+.service-sec1 {
+    position: relative;
+    z-index: 3;
+    background-position: top center;
+    background-size: auto;
+    padding-top: 340px;
+    @include hd {
+        background-size: 100% 748px;
+    }
+    @include xl {
+        padding-top: 300px;
+    }
+}
+/* Service Area 2 ---------------------------------- */
+.service-list {
+    display: flex;
+    justify-content: space-between;
+    gap: 40px;
+    padding: 40px 0;
+    border-bottom: 1px solid rgba($color: #ffffff, $alpha: 0.24);
+    .box-number {
+        font-size: 24px;
+        font-weight: 600;
+        color: $theme-color;
+        margin-top: -0.2em;
+    }
+    .box-content {
+        max-width: 521px;
+        margin-right: auto;
+    }
+    .box-title {
+        font-size: 30px;
+        font-weight: 700;
+        margin-bottom: 8px;
+        @include lg {
+            font-size: 24px;
+        }
+        @include xs {
+            font-size: 20px;
+        }
+    }
+    .box-text {
+        line-height: 1.625em;
+    }
+    .box-img {
+        margin: -59px 0;
+        margin-right: auto;
+        flex: none;
+        transform: rotate(28deg) scale(0);
+        transition: 0.4s;
+        align-self: center;
+        img {
+            width: 175px;
+            height: 203px;
+            object-fit: cover;
+            border-radius: 24px;
+        }
+    }
+    .btn-wrap {
+        flex: none;
+        align-self: center;
+    }
+    &.item-active,
+    &:hover {
+        .box-img {
+            transform: rotate(28deg) scale(1);
+        }
+    }
+    &-wrap {
+        &:first-child {
+            .service-list {
+                border-top: 1px solid rgba($color: #ffffff, $alpha: 0.24);
+                @include md {
+                    border: 0;
+                    padding-top: 0;
+                }
+            }
+        }
+    }
+    @include md {
+        flex-wrap: wrap;
+        border: 0;
+        padding-bottom: 0;
+        padding-top: 50px;
+        gap: 30px;
+        .box-img {
+            margin: 0;
+            transform: none;
+            order: 1;
+            width: 100%;
+            img {
+                width: 100%;
+                min-height: 500px;
+                border-radius: 16px;
+            }
+        }
+        .box-number {
+            order: 2;
+        }
+        .box-content {
+            order: 3;
+            max-width: 442px;
+        }
+        .btn-wrap {
+            order: 4;
+        }
+        &.item-active,
+        &:hover {
+            .box-img {
+                transform: none;
+            }
+        }
+    }
+    @include sm {
+        .box-img {
+            img {
+                min-height: 400px;
+            }
+        }
+        .box-content {
+            max-width: none;
+        }
+    }
+    @include xs {
+        .box-img {
+            img {
+                min-height: 300px;
+            }
+        }
+    }
+}
+
+
+/* Service Details ---------------------------------- */ 
+.page-title {
+    font-size: 30px;
+    margin-bottom: 25px;
+}
+
+.page-img {
+    overflow: hidden;
+    border-radius: 24px;
+    img {
+        width: 100%;
+    }
+    @include sm {
+        border-radius: 10px;
+    }
+}
+.page-single {
+    margin-bottom: 30px;
+}
+.service-info-card {
+    background: $smoke-color;
+    border-radius: 16px;
+    padding: 24px;
+    display: flex;
+    gap: 16px;
+    .box-icon {
+        color: $theme-color;
+        flex: none;
+    }
+    .box-title {
+        font-size: 18px;
+        font-weight: 600;
+        margin-bottom: 5px;
+    }
+    .box-text {
+        line-height: 1.625em;
+    }
+}

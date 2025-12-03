@@ -1,0 +1,282 @@
+// .ot-carousel {
+//     .swiper-container {
+//         padding-left: calc(var(--container-gutters) * 0.5);
+//         padding-right: calc(var(--container-gutters) * 0.5);
+//         margin-left: calc(var(--container-gutters) * -0.5);
+//         margin-right: calc(var(--container-gutters) * -0.5);
+//     }
+//     .swiper-wrapper {
+//         margin-left: calc(var(--container-gutters) * -0.5) !important;
+//         margin-right: calc(var(--container-gutters) * -0.5) !important;
+//         overflow: hidden;
+//     }
+//     .swiper-slide {
+//         margin-left: calc(var(--container-gutters) * 0.5) !important;
+//         margin-right: calc(var(--container-gutters) * 0.5) !important;
+//     }
+// }
+// .swiper-visible {
+//     overflow: unset;
+// }
+
+.swiper-wrapper.row {
+    flex-wrap: nowrap;
+}
+.ot-slider {
+    &.has-shadow {
+        padding-left: 12px;
+        padding-right: 12px;
+        margin: -25px -12px;
+        .swiper-wrapper {
+            padding: 25px 0;
+        }
+    }
+}
+.swiper-fade {
+    .swiper-slide {
+        transition: 0.6s ease-in-out;
+    }
+    .swiper-slide-prev {
+        opacity: 0;
+    }
+    &:after {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background-color: #615AEA;
+        z-index: 3;
+        pointer-events: none;
+    }
+    &.fade-ani {
+        &:after {
+            animation: swiperFade 0.6s linear 0.2s forwards;
+        }
+    }
+}
+@keyframes swiperFade {
+    from {
+        opacity: 1;
+    }
+    to {
+        opacity: 0;
+    }
+}
+
+.swiper-pagination-bullets {
+    position: relative;
+    z-index: 3;
+    text-align: center;
+    margin: 40px 0 16px 0;
+    bottom: 0 !important;
+    line-height: 1;
+    .swiper-pagination-bullet {
+        display: inline-block;
+        --swiper-pagination-bullet-horizontal-gap: 6px;
+        width: 60px;
+        height: 3px;
+        opacity: 1;
+        background-color: rgba($color: #ffffff, $alpha: 0.24);
+        position: relative;
+        border-radius: 24px;
+        cursor: pointer;
+        transition: 0.4s;
+        &:before {
+            content: '';
+            position: absolute;
+            inset: 3px;
+            border-radius: inherit;
+            transition: 0.4s ease;
+            background-color: $theme-color;
+            opacity: 0;
+        }
+        &.swiper-pagination-bullet-active {
+            background-color: $theme-color;
+            &:before {
+                opacity: 1;
+                inset: 4px;
+            }
+        }
+        @include xs {
+            width: 20px;
+        }
+    }
+}
+.swiper-fade {
+    .swiper-slide {
+        opacity: 0 !important;
+    }
+    .swiper-slide-active {
+        opacity: 1 !important;
+    }
+}
+.slider-area {
+    position: relative;
+}
+
+.slider-arrow {
+    display: inline-block;
+    padding: 0;
+    background-color: transparent;
+    color: $white-color;
+    position: absolute;
+    top: 50%;
+    border: 1px solid transparent;
+    box-shadow: 0px 4px 25px rgba(0, 0, 0, 0.1);
+    left: var(--pos-x, -30px);
+    width: var(--icon-size, 56px);
+    height: var(--icon-size, 56px);
+    line-height: var(--icon-size, 54px);
+    font-size: var(--icon-font-size, 24px);
+    margin-top: calc(var(--icon-size, 56px) / -2);
+    z-index: 3;
+    border-radius: 30px;
+    > i {
+        background: linear-gradient(0deg, $theme-color2, $theme-color);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        transition: 0.4s;
+    }
+    &:before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        padding: 2px;
+        border-radius: 50%;
+        background: linear-gradient(-30deg, $theme-color2, $theme-color 80%);
+        -webkit-mask: linear-gradient(white, white) content-box, linear-gradient(white, white);
+        -webkit-mask-composite: xor;
+        mask-composite: exclude;
+    }
+    &:after {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(-30deg, $theme-color2, $theme-color 80%);
+        border-radius: 50%;
+        z-index: -1;
+        transition: 0.4s;
+        transform: scale(0);
+    }
+    &.default {
+        position: relative;
+        --pos-x: 0;
+        margin-top: 0;
+    }
+
+    &.slider-next {
+        right: var(--pos-x, -30px);
+        left: auto;
+    }
+    &.style2 {
+        border-radius: 22px;
+        &:hover {
+            background: $theme-color2;
+        }
+    }
+    &:hover {
+        color: $white-color;
+        > i {
+            background: linear-gradient(0deg, $white-color, $white-color);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        &:after {
+            transform: scale(1);
+        }
+    }
+}
+
+.arrow-margin {
+    .slider-arrow {
+        top: calc(50% - 30px);
+    }
+}
+
+.arrow-wrap {
+    position: relative;
+    .slider-arrow {
+        opacity: 0;
+        visibility: hidden;
+        transform: scale(0.4);
+        @include xl {
+            display: none;
+        }
+    }
+
+    &:hover {
+        .slider-arrow {
+            opacity: 1;
+            visibility: visible;
+            transform: scale(1);
+        }
+    }
+}
+
+@include xxl {
+    .slider-arrow {
+        --arrow-horizontal: -20px;
+        --pos-x: 20px;
+    }
+}
+
+@include ml {
+    .slider-arrow {
+        --arrow-horizontal: 40px;
+    }
+}
+.icon-box {
+    .slider-arrow {
+        &:not(:last-child) {
+            margin-right: 8px;
+        }
+    }
+}
+@include md {
+    .slider-arrow {
+        --icon-size: 40px;
+        line-height: 38px;
+        margin-right: 10px;
+        font-size: 14px;
+
+        &.slider-next {
+            margin-right: 0;
+        }
+    }
+
+    .slick-dots {
+        margin: 40px 0 0 0;
+    }
+    .icon-box {
+        .slider-arrow {
+            margin-right: 0;
+        }
+    }
+}
+
+
+
+/*slider-drag-cursor**************/
+.slider-drag-cursor {
+    pointer-events: none;
+    z-index:99999;
+    position:fixed;
+    top:0;
+    left:-2px;
+    height:36px;
+    width:36px;
+//  background:rgba(255,255,255,0.2);
+    transition:width .1s ease-in-out;
+    background: $theme-color;
+    opacity: 1;
+	width: 120px;
+	height: 120px;
+    line-height: 120px;
+    text-align: center;
+	border-radius: 100%;
+    color: $white-color;
+    display: none;
+    cursor: none;
+    &.active{   
+        display: block;          
+    }   
+}

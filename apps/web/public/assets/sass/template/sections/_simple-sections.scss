@@ -1,0 +1,250 @@
+
+.check-list {
+    ul {
+        padding-left: 0;
+        list-style: none;
+        text-align: left;
+        margin-bottom: 0;
+    }
+    li {
+        font-family: $body-font;
+        margin-bottom: 11px;
+        &:last-child {
+            margin-bottom: 0;
+        }
+        > i {
+            color: $theme-color;
+            margin-right: 5px;
+        }
+    }
+    &.style-grid {
+        ul {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            @include sm {
+                grid-template-columns: repeat(1, 1fr);
+            }
+        }
+    }
+}
+
+.social-card {
+    padding: 40px;
+    border: 1px solid $border-color;
+    border-radius: 15px;
+    @include sm {
+        border-radius: 10px;
+    }
+    @include xs {
+        padding: 40px 10px;
+    }
+    .box-title {
+        font-size: 20px;
+        font-weight: 500;
+        margin-bottom: 12px;
+    }
+    .ot-social {
+        margin-bottom: 22px;
+        a {
+            --icon-size: 40px;
+            border-radius: 99px;
+            color: $theme-color;
+            &:hover {
+                color: $white-color;
+            }
+        }
+    }
+    .box-link {
+        color: $body-color;
+        text-decoration: underline;
+        display: block;
+        margin-bottom: -0.25em;
+    }
+}
+.bg-img {
+    position: absolute;
+    inset: 0;
+    height: 100%;
+    width: 100%;
+    img {
+        width: 100%;
+        height: 100%;
+    }
+}
+
+.ot-video {
+    position: relative;
+    border-radius: 10px;
+    img {
+        border-radius: inherit;
+    }
+    .play-btn {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+    }
+}
+.rounded-10 {
+    border-radius: 10px;
+}
+.rounded-15 {
+    border-radius: 15px;
+    @include sm {
+        border-radius: 10px;
+    }
+}
+.rounded-20 {
+    border-radius: 20px;
+    @include sm {
+        border-radius: 10px;
+    }
+}
+
+.cta-sec2 {
+    max-width: 1680px;
+    border-radius: 30px 30px 0 30px;
+    margin-left: auto;
+    margin-right: auto;
+    overflow: hidden;
+    position: relative;
+    @include md {
+        border-radius: 20px 20px 0 0;
+        padding-top: 80px;
+    }
+}
+
+.cta-texts {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 30px;
+    background-color: $theme-color;
+    padding: 22px 60px;
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    @include md {
+        left: 0;
+    }
+    .line {
+        width: 132px;
+        height: 1px;
+        background-color: $white-color;
+    }
+    .text {
+        font-size: 14px;
+        font-weight: 500;
+        text-transform: uppercase;
+        color: $white-color;
+    }
+}
+@include sm {
+    .cta-texts {
+        padding: 18px 30px;
+        gap: 10px 20px;
+        .line {
+            width: 80px;
+        }
+    }
+}
+
+@include xs {
+    .cta-texts {
+        flex-direction: column;
+    }
+}
+
+.newsticker-area {
+    background-color: $title-color;
+    padding: 37px 0;
+    text-align: center;
+    .swiper-wrapper{
+        transition-timing-function:linear!important; 
+    }
+    .swiper-slide { 
+        width: auto; 
+    }
+}
+.newsticker-title {
+    display: block;
+    font-size: 30px;
+    font-weight: 500;
+    color: $white-color;
+    text-transform: uppercase;
+    &:hover {
+        color: $theme-color;
+    }
+}
+
+.shape-circle {
+    --circle-size: 90px;
+    background-color: #B6DCFD;
+    @include equal-size(var(--circle-size));
+    border-radius: 999px;
+    &.circle2 {
+        --circle-size: 110px;
+        background-color: #DFDDFF;
+        animation-delay: 4s;
+    }
+}
+
+
+.btn-wrap {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 20px 30px;
+}
+
+@include lg {
+    p {
+        &.mb-40 {
+            margin-bottom: 35px;
+        }
+        &.mb-45 {
+            margin-bottom: 38px;
+        }
+    }
+}
+.mega-hover {
+    position: relative;
+    overflow: hidden;
+    z-index: 2;
+    &:after,
+    &:before {
+        content: "";
+        position: absolute;
+        pointer-events: none;
+        opacity: 1;
+        z-index: -1;
+    }
+    &:before {
+        top: 0;
+        right: 51%;
+        bottom: 0;
+        left: 50%;
+        background: rgba(255, 255, 255, 0.2);
+    }
+    &:after {
+        top: 50%;
+        right: 0;
+        bottom: 50%;
+        left: 0;
+        background: rgba(255, 255, 255, 0.3);
+    }
+    &:hover {
+        &:before {
+            left: 0;
+            right: 0;
+            opacity: 0;
+            transition: all 900ms linear;
+        }
+        &:after {
+            top: 0;
+            bottom: 0;
+            opacity: 0;
+            transition: all 900ms linear;
+        }
+    }
+}

@@ -1,0 +1,65 @@
+
+/* Counter 1 ---------------------------------- */
+.counter-card {
+    background: $smoke-color;
+    border-radius: 24px;
+    padding: 24px;
+    text-align: center;
+    .box-number {
+        font-size: 40px;
+        font-weight: 700;
+        color: $title-color;
+        margin-bottom: 8px;
+        margin-top: -0.15em;
+    }
+    .box-text {
+        font-size: 16px;
+        font-weight: 400;
+        color: $theme-color;
+        margin-bottom: 0;
+        display: inline-block;
+        position: relative;
+        padding: 4px 16px;
+        line-height: normal;
+        &:after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: $theme-color;
+            opacity: 0.16;
+            border-radius: 24px;
+
+        }
+    }
+    &.style2 {
+        background: transparent;
+        padding: 50px 30px;
+        border-radius: 0;
+        .box-number {
+            font-size: 74px;
+            font-weight: 700;
+            margin-bottom: 15px;
+            @include lg {
+                font-size: 50px;
+            }
+            @include sm {
+                font-size: 40px;
+            }
+        }
+        @include md {
+            padding: 0;
+            &:not(:last-child) {
+                margin-bottom: 30px;
+            }
+        }
+    }
+}
+
+.counter-sec-border {
+    border-top: 1px solid $border-color;
+    border-bottom: 1px solid $border-color;
+    padding: 100px 0;
+    @include md {
+        padding: 80px 0;
+    }
+}

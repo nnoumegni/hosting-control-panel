@@ -1,0 +1,125 @@
+/* Why 2 ---------------------------------- */ 
+.work-process-list {
+    list-style: none;
+    padding: 0;
+    margin: 0 auto;
+    max-width: 971px;
+    position: relative;
+    &:after {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 50%;
+        width: 1px;
+        height: 100%;
+        border: 1px dashed rgba(255, 255, 255, 0.24);
+        transform: translate(-50%, 0);
+        z-index: -1;
+        @include md {
+            left: 20px;
+        }
+    }   
+    .work-process-single-list {
+        &.dot-active {
+            .single-work-process {
+                &:before {
+                    transform: scaleY(1);
+                }
+            }
+        }
+        &:first-child {
+            .single-work-process {
+                padding-top: 40px;
+            }
+        }
+        &:last-child {
+            .single-work-process {
+                padding-bottom: 40px;
+                @include md {
+                    padding-bottom: 0;
+                }
+            }
+        }
+        &:nth-child(odd) {
+            .single-work-process {
+                margin-left: auto;
+                @include md {
+                    margin-left: 0;
+                }
+            }
+        } 
+        &:nth-child(even) {
+            .single-work-process {
+                flex-direction: row-reverse;
+                text-align: right;
+                &:before {
+                    left: auto;
+                    right: 19px;
+                }
+                @include md {
+                    flex-direction: row;
+                    text-align: start;
+                    &:before {
+                        left: 19px;
+                        right: auto;
+                    }
+                }
+            }
+        }     
+    }
+}
+.single-work-process {
+    max-width: 506px;
+    display: flex;
+    gap: 24px;
+    padding: 0 0 64px;
+    position: relative;
+    &:before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 20px;
+        width: 1px;
+        height: 100%;
+        border: 1px solid $theme-color;
+        z-index: -1;
+        transition: 0.4s all ease;
+        transform: scaleY(0);
+        transform-origin: top;
+    }
+    .box-number {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        flex: none;
+        border: 1px solid $theme-color;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        color: $theme-color;
+        position: relative;
+        z-index: 1;
+        .box-number-bg {
+            position: absolute;
+            inset: 0;
+            border-radius: 50%;
+            background: $theme-color;
+            z-index: -1;
+        }
+    }
+    .box-title {
+        font-size: 18px;
+        font-weight: 600;
+    }
+    .box-text {
+        line-height: 1.625em;
+    }
+    &:hover {
+        &:before {
+            transform: scaleY(1);
+        }
+    }
+    @include md {
+        max-width: none;
+    }
+}

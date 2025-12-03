@@ -19,7 +19,9 @@ import {
 import type { ServerSettings } from '@hosting/common';
 import { apiFetch } from '../../../lib/api';
 import { ServerSettingsModal } from '../../../components/server-settings-modal';
+import { AuthGuard } from '../../../components/auth-guard';
 import { AwsCredentialsGuard } from './_components/aws-credentials-guard';
+import { ApiEndpointBanner } from '../../../components/api-endpoint-banner';
 
 const navLinks = [
   { href: '/dashboard', label: 'Overview', icon: LayoutDashboard },
@@ -73,8 +75,10 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AwsCredentialsGuard>
-      <div className="flex min-h-screen">
+    <AuthGuard>
+      <AwsCredentialsGuard>
+        <ApiEndpointBanner />
+        <div className="flex min-h-screen">
           <aside className="hidden border-r border-slate-800 bg-slate-900/30 lg:flex lg:flex-col lg:w-[260px] lg:fixed lg:top-[var(--top-bar-height,56px)] lg:bottom-0 lg:left-0 lg:z-40">
             <div className="flex flex-col h-full">
               <div className="p-6 pb-0 flex-shrink-0">
@@ -119,7 +123,8 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
         initialSettings={serverSettings}
         onSaved={handleServerSettingsSaved}
       />
-    </AwsCredentialsGuard>
+      </AwsCredentialsGuard>
+    </AuthGuard>
   );
 }
 

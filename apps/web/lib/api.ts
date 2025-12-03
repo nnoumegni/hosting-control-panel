@@ -22,10 +22,15 @@ const resolveUrl = (input: string | URL): string | URL => {
 
 export async function apiFetch<T>(input: string | URL, init?: RequestInit): Promise<T> {
   const url = resolveUrl(input);
+  
+  // Get auth token from localStorage if available (client-side only)
+  const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+  
   const requestInit: RequestInit = {
     ...init,
     headers: {
       'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...(init?.headers ?? {}),
     },
   };

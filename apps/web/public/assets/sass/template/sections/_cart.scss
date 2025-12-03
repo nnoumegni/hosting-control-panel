@@ -1,0 +1,327 @@
+
+.cart_table {
+    border: 0;
+    margin-bottom: 45px;
+
+    thead {
+        background-color: transparent;
+        border-bottom: 1px solid $border-color;
+        th {
+            border: none !important;
+        }
+    }
+
+    td:before,
+    th {
+        font-family: $title-font;
+        color: $title-color;
+        font-weight: 600;
+        font-size: 24px;
+        border: none;
+        padding: 27px 15px 18px;
+        padding-left: 0;
+    }
+
+    td:before {
+        content: attr(data-title);
+        position: absolute;
+        left: 15px;
+        top: 50%;
+        vertical-align: top;
+        padding: 0;
+        transform: translateY(-50%);
+        display: none;
+        font-size: 18px;
+    }
+
+    td {
+        border: none;
+        border-bottom: 1px solid $border-color;
+        color: $title-color;
+        padding: 20px 10px;
+        position: relative;
+        vertical-align: middle;
+        .amount {
+            color: $theme-color;
+            font-size: 16px;
+            font-weight: 600;
+            del {
+                color: $body-color;
+            }
+        }
+    }
+
+    .product-quantity {
+        color: $title-color;
+
+        input {
+            position: relative;
+            top: -2px;
+        }
+    }
+
+    .cart-productname {
+        font-weight: 700;
+        font-size: 18px;
+        font-family: $title-font;
+        color: $title-color;
+    }
+
+    .cart-productimage {
+        display: inline-block;
+        border: 0;
+    }
+
+    .remove {
+        color: $theme-color;
+        font-size: 20px;
+    }
+
+    td.product-quantity {
+        min-width: 155px;
+    }
+    .quantity {
+        position: relative;
+        border: 1px solid $border-color;
+        border-radius: 100px;
+        display: inline-flex;
+        align-items: center;
+        padding: 0 30px;
+        min-height: 44px;
+        .qty-input {
+            width: 41px;
+            height: 20px;
+            border: 0;
+            border-left: 1px solid $border-color;
+            border-right: 1px solid $border-color;
+            background-color: transparent;
+            color: $title-color;
+            padding: 0 10px;
+            text-align: left;
+            font-weight: 500;
+            text-align: center;
+            margin: 0 16px;
+        }
+        .qty-btn {
+            color: $title-color;
+            background-color: transparent;
+            position: initial;
+            right: 21px;
+            height: auto;
+            width: auto;
+            border: none;
+            line-height: 16px;
+        }
+        .quantity-minus {
+            bottom: 7px;
+        }
+        .quantity-plus {
+            top: 12px;
+        }
+    }
+
+    .actions {
+        text-align: right;
+        vertical-align: middle;
+        padding-left: 20px;
+        > .ot-btn {
+            font-size: 16px;
+            padding: 20px 28px;
+            margin-right: 15px;
+
+            &:last-child {
+                margin-right: 0;
+            }
+        }
+    }
+
+    .ot-cart-coupon {
+        float: left;
+        margin: 0;
+        width: 455px;
+        max-width: 100%;
+        display: flex;
+
+        input {
+            width: calc(100% - 200px);
+            margin-right: 10px;
+            border-radius: 22px;
+        }
+
+        .ot-btn {
+            font-size: 16px;
+            padding: 20px 25px;
+            width: max-content;
+        }
+    }
+}
+
+.cart_totals {
+    border: 1px solid #ecf0f1;
+
+    th,
+    td {
+        vertical-align: top;
+        padding: 20px 20px;
+        border: none;
+        border-bottom: 1px solid #ecf0f1;
+        font-size: 14px;
+        color: $title-color;
+        width: 55%;
+
+        &:first-child {
+            width: 45%;
+            background-color: #f9fbfb;
+            font-weight: 700;
+            font-size: 14px;
+            color: #333333;
+        }
+    }
+
+    .shipping-calculator-button {
+        display: inline-block;
+        border-bottom: 1px solid;
+        color: $title-color;
+        font-weight: 700;
+
+        &:hover {
+            color: $theme-color;
+        }
+    }
+
+    .woocommerce-shipping-destination {
+        margin-bottom: 10px;
+    }
+
+    .woocommerce-shipping-methods {
+        margin-bottom: 0;
+    }
+
+    .shipping-calculator-form {
+        display: none;
+
+        p:first-child {
+            margin-top: 20px;
+        }
+
+        p:last-child {
+            margin-bottom: 0;
+        }
+    }
+
+    .amount {
+        font-weight: 700;
+    }
+
+    .order-total {
+        .amount {
+            color: $theme-color;
+        }
+    }
+}
+
+.empty-notice {
+    margin: 40px auto;
+}
+
+@include md {
+    .cart_table {
+        th {
+            padding: 23px 8px;
+            font-size: 14px;
+        }
+
+        .cart-productname {
+            font-size: 14px;
+        }
+
+        .ot-cart-coupon {
+            width: 100%;
+            margin-bottom: 20px;
+            justify-content: center;
+        }
+
+        .actions {
+            text-align: center;
+        }
+        .cart-productimage {
+            max-width: 100px;
+        }
+    }
+}
+
+@include sm {
+    .cart_table {
+        text-align: left;
+        min-width: auto;
+        border-collapse: separate;
+        border-spacing: 0 20px;
+        border: none;
+
+        thead {
+            display: none;
+        }
+
+        td {
+            padding: 15px;
+            display: block;
+            width: 100%;
+            padding-left: 25%;
+            text-align: right;
+            border: 1px solid $border-color;
+            border-bottom: none;
+
+            &::before {
+                display: block;
+            }
+
+            &:last-child {
+                border-bottom: 1px solid $border-color;
+            }
+
+            &.actions {
+                padding-left: 15px;
+                text-align: center;
+
+                > .ot-btn {
+                    margin-top: 10px;
+                    margin-right: 0;
+                    display: block;
+                    width: max-content;
+                    margin-left: auto;
+                    margin-right: auto;
+
+                    &:last-child {
+                        margin-right: auto;
+                    }
+                }
+            }
+        }
+
+        .ot-cart-coupon {
+            width: 100%;
+            text-align: center;
+            float: none;
+            justify-content: center;
+            display: block;
+            padding-bottom: 10px;
+
+            input {
+                width: 100%;
+                margin-bottom: 10px;
+            }
+        }
+    }
+
+    .cart_totals {
+        th,
+        td {
+            padding: 15px 10px;
+
+            &:first-child {
+                width: 17%;
+                line-height: 1.4;
+            }
+        }
+    }
+}
