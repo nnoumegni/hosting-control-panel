@@ -26,7 +26,7 @@ export default function ServicesPage() {
             <span className="sub-title">Our Services</span>
             <h2 className="sec-title">Comprehensive Hosting Management</h2>
           </div>
-          <div className="row gy-4 justify-content-center">
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 justify-items-center">
             {[
               {
                 icon: 'fa-globe',
@@ -59,7 +59,7 @@ export default function ServicesPage() {
                 description: 'Configure email accounts, forwarders, and spam filters. Full email hosting capabilities.',
               },
             ].map((service, idx) => (
-              <div key={idx} className="col-xl-4 col-md-6">
+              <div key={idx} className="w-full max-w-sm">
                 <div className="service-card">
                   <div className="box-icon">
                     <i className={`fal ${service.icon}`}></i>

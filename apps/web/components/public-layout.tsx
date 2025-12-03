@@ -75,8 +75,8 @@ export function PublicLayout({ children }: PublicLayoutProps) {
       <header className="ot-header header-layout2">
         <div className="header-top">
           <div className="container">
-            <div className="row justify-content-xl-between justify-content-center align-items-center gy-2">
-              <div className="col-auto">
+            <div className="flex flex-wrap justify-center xl:justify-between items-center gap-y-2">
+              <div className="flex-shrink-0">
                 <div className="header-links">
                   <ul>
                     <li>
@@ -88,7 +88,7 @@ export function PublicLayout({ children }: PublicLayoutProps) {
                   </ul>
                 </div>
               </div>
-              <div className="col-auto d-none d-xl-block">
+              <div className="flex-shrink-0 hidden xl:block">
                 <div className="header-links">
                   <ul>
                     <li>
@@ -104,16 +104,16 @@ export function PublicLayout({ children }: PublicLayoutProps) {
         <div className={`sticky-wrapper ${isSticky ? 'sticky' : ''}`}>
           <div className="menu-area">
             <div className="container">
-              <div className="row align-items-center justify-content-between">
-                <div className="col-auto">
+              <div className="flex items-center justify-between">
+                <div className="flex-shrink-0">
                   <div className="header-logo">
                     <Link href="/">
                       <img src="/assets/img/logo.svg" alt="Hosting Control Panel" />
                     </Link>
                   </div>
                 </div>
-                <div className="col-auto">
-                  <nav className="main-menu d-none d-lg-inline-block">
+                <div className="flex-shrink-0">
+                  <nav className="main-menu hidden lg:inline-block">
                     <ul>
                       <li className={isActive('/') ? 'active' : ''}>
                         <Link href="/">Home</Link>
@@ -130,16 +130,16 @@ export function PublicLayout({ children }: PublicLayoutProps) {
                     </ul>
                   </nav>
                 </div>
-                <div className="col-auto">
+                <div className="flex-shrink-0">
                   <div className="header-button">
                     <button
                       type="button"
-                      className="ot-menu-toggle d-block d-lg-none"
+                      className="ot-menu-toggle block lg:hidden"
                       onClick={() => setIsMenuOpen(true)}
                     >
                       <i className="far fa-bars"></i>
                     </button>
-                    <Link href="/login" className="ot-btn d-none d-xl-flex">
+                    <Link href="/login" className="ot-btn hidden xl:flex">
                       Sign In<i className="far fa-long-arrow-right ms-2"></i>
                     </Link>
                   </div>
@@ -157,7 +157,7 @@ export function PublicLayout({ children }: PublicLayoutProps) {
       <footer className="footer-wrapper footer-layout1 space-top">
         <div className="container">
           <div className="footer-top" data-cue="slideInUp">
-            <div className="cta-content" data-bg-src="/assets/img/bg/cta_bg_shape1.png">
+            <div className="cta-content">
               <h2 className="mb-0">
                 Discover How We Can <span className="text-theme">Support</span> Your Secure Advancement.
               </h2>
@@ -169,8 +169,8 @@ export function PublicLayout({ children }: PublicLayoutProps) {
         </div>
         <div className="widget-area">
           <div className="container">
-            <div className="row justify-content-between">
-              <div className="col-md-6 col-xl-auto" data-cue="slideInUp">
+            <div className="flex flex-wrap justify-between gap-8">
+              <div className="w-full md:w-auto xl:w-auto" data-cue="slideInUp">
                 <div className="widget footer-widget">
                   <div className="ot-widget-about">
                     <div className="about-logo">
@@ -195,7 +195,7 @@ export function PublicLayout({ children }: PublicLayoutProps) {
                   </div>
                 </div>
               </div>
-              <div className="col-md-6 col-xl-auto" data-cue="slideInUp">
+              <div className="w-full md:w-auto xl:w-auto" data-cue="slideInUp">
                 <div className="widget widget_nav_menu footer-widget">
                   <h3 className="widget_title">Quick Links</h3>
                   <div className="menu-all-pages-container">
@@ -221,8 +221,8 @@ export function PublicLayout({ children }: PublicLayoutProps) {
         </div>
         <div className="copyright-wrap">
           <div className="container">
-            <div className="row justify-content-between align-items-center">
-              <div className="col-auto">
+            <div className="flex justify-between items-center">
+              <div className="flex-shrink-0">
                 <p className="copyright-text">
                   © {new Date().getFullYear()} Hosting Control Panel. All Rights Reserved.
                 </p>

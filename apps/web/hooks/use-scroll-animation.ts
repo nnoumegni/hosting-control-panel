@@ -39,22 +39,26 @@ export function useScrollAnimation(options: ScrollAnimationOptions = {}) {
     // Observe all elements with data-cue attribute
     const elements = document.querySelectorAll('[data-cue]');
     elements.forEach((el) => {
-      // Set initial state
+      // Set initial state - ensure it's hidden even if CSS hasn't loaded yet
       const elHtml = el as HTMLElement;
       const cue = elHtml.getAttribute('data-cue');
       
-      if (cue === 'slideInUp') {
-        elHtml.style.opacity = '0';
-        elHtml.style.transform = 'translateY(30px)';
-        elHtml.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
-      } else if (cue === 'slideInLeft') {
-        elHtml.style.opacity = '0';
-        elHtml.style.transform = 'translateX(-30px)';
-        elHtml.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
-      } else if (cue === 'slideInRight') {
-        elHtml.style.opacity = '0';
-        elHtml.style.transform = 'translateX(30px)';
-        elHtml.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
+      // Only set inline styles if the element doesn't already have the animate-in class
+      // This prevents overriding CSS that might have !important
+      if (!elHtml.classList.contains('animate-in')) {
+        if (cue === 'slideInUp') {
+          elHtml.style.opacity = '0';
+          elHtml.style.transform = 'translateY(30px)';
+          elHtml.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
+        } else if (cue === 'slideInLeft') {
+          elHtml.style.opacity = '0';
+          elHtml.style.transform = 'translateX(-30px)';
+          elHtml.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
+        } else if (cue === 'slideInRight') {
+          elHtml.style.opacity = '0';
+          elHtml.style.transform = 'translateX(30px)';
+          elHtml.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
+        }
       }
       
       observer.observe(el);

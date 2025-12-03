@@ -21,8 +21,8 @@ export default function ContactPage() {
       {/* Contact Section */}
       <section className="space">
         <div className="container">
-          <div className="row gy-40">
-            <div className="col-xl-4">
+          <div className="grid grid-cols-1 xl:grid-cols-3 gap-10">
+            <div className="xl:col-span-1">
               <div className="contact-info-wrap">
                 <div className="title-area">
                   <span className="sub-title">Get In Touch</span>
@@ -52,31 +52,31 @@ export default function ContactPage() {
                 </div>
               </div>
             </div>
-            <div className="col-xl-8">
+            <div className="xl:col-span-2">
               <div className="contact-form-wrap">
                 <form className="contact-form">
-                  <div className="row">
-                    <div className="col-md-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
                       <div className="form-group">
                         <input type="text" className="form-control" placeholder="Your Name" required />
                       </div>
                     </div>
-                    <div className="col-md-6">
+                    <div>
                       <div className="form-group">
                         <input type="email" className="form-control" placeholder="Your Email" required />
                       </div>
                     </div>
-                    <div className="col-12">
+                    <div className="md:col-span-2">
                       <div className="form-group">
                         <input type="text" className="form-control" placeholder="Subject" required />
                       </div>
                     </div>
-                    <div className="col-12">
+                    <div className="md:col-span-2">
                       <div className="form-group">
                         <textarea className="form-control" rows={5} placeholder="Your Message" required></textarea>
                       </div>
                     </div>
-                    <div className="col-12">
+                    <div className="md:col-span-2">
                       <button type="submit" className="ot-btn">
                         Send Message<i className="far fa-long-arrow-right ms-2"></i>
                       </button>

@@ -23,4 +23,49 @@ body {
   --top-bar-height: 56px; /* Approximate height of the top navigation bar */
 }
 
+/* Fix for box-icon image centering */
+.feature-card .box-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
 
+.feature-card .box-icon img {
+  display: block;
+  margin: 0 auto;
+}
+
+/* Ensure service-list-wrap animations work even with item-active */
+/* Set initial hidden state for all data-cue elements */
+[data-cue="slideInUp"] {
+  opacity: 0 !important;
+  transform: translateY(30px) !important;
+  transition: opacity 0.6s ease, transform 0.6s ease !important;
+}
+
+[data-cue="slideInUp"].animate-in {
+  opacity: 1 !important;
+  transform: translateY(0) !important;
+}
+
+[data-cue="slideInLeft"] {
+  opacity: 0 !important;
+  transform: translateX(-30px) !important;
+  transition: opacity 0.6s ease, transform 0.6s ease !important;
+}
+
+[data-cue="slideInLeft"].animate-in {
+  opacity: 1 !important;
+  transform: translateX(0) !important;
+}
+
+[data-cue="slideInRight"] {
+  opacity: 0 !important;
+  transform: translateX(30px) !important;
+  transition: opacity 0.6s ease, transform 0.6s ease !important;
+}
+
+[data-cue="slideInRight"].animate-in {
+  opacity: 1 !important;
+  transform: translateX(0) !important;
+}
