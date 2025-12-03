@@ -25,3 +25,5 @@ export interface GatewayAISettingsRepository {
 
 
 
+
+
