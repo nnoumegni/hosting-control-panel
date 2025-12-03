@@ -1,0 +1,4 @@
+# Example one-liner (once you host this installer.sh somewhere, e.g. S3 or your API):
+#
+#   curl -fsSL https://your-domain/installers/jetcamer-agent-install.sh | sudo bash
+#

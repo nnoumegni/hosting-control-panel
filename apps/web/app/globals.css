@@ -1,0 +1,26 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light dark;
+  --background: 255 255 255;
+  --foreground: 15 23 42;
+  --top-bar-height: 56px; /* Approximate height of the top navigation bar */
+}
+
+body {
+  background-color: rgb(var(--background));
+  color: rgb(var(--foreground));
+  font-smooth: always;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+:root {
+  --top-bar-height: 56px; /* Approximate height of the top navigation bar */
+}
+
+

@@ -1,0 +1,21 @@
+{
+  "name": "hosting-control-panel",
+  "packageManager": "yarn@4.11.0",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev:api": "yarn workspace @hosting/api dev",
+    "dev:web": "yarn workspace @hosting/web dev",
+    "dev": "yarn dev:api & yarn dev:web",
+    "build": "yarn workspaces foreach -A run build",
+    "start": "yarn workspace @hosting/api start",
+    "start:api": "yarn workspace @hosting/api start",
+    "start:web": "yarn workspace @hosting/web start",
+    "lint": "yarn workspaces foreach -A run lint",
+    "test": "yarn workspaces foreach -A run test",
+    "typecheck": "yarn workspaces foreach -A run typecheck"
+  }
+}

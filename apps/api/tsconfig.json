@@ -1,0 +1,17 @@
+{
+  "extends": "@hosting/tsconfig/node.json",
+  "compilerOptions": {
+    "baseUrl": "./src",
+    "rootDir": "./src",
+    "outDir": "./dist",
+    "types": ["node"],
+    "paths": {
+      "@hosting/api/*": ["./*"],
+      "@hosting/common": ["../../packages/common/dist/index.d.ts"],
+      "@hosting/common/*": ["../../packages/common/dist/*.d.ts"]
+    }
+  },
+  "include": ["src"],
+  "exclude": ["dist", "node_modules"],
+  "references": [{ "path": "../../packages/common" }]
+}

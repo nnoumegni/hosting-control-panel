@@ -1,0 +1,16 @@
+[Unit]
+Description=Web Hosting Security Agent
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/webagent
+Restart=always
+RestartSec=5
+User=root
+Environment=AGENT_TOKEN=supersecrettoken
+WorkingDirectory=/usr/local/bin
+LimitNOFILE=65535
+
+[Install]
+WantedBy=multi-user.target

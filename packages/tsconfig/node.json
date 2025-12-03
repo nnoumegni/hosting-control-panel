@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "display": "Node.js",
+  "extends": "./base.json",
+  "compilerOptions": {
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "sourceMap": true,
+    "declaration": true,
+    "declarationMap": true
+  },
+  "ts-node": {
+    "swc": true
+  }
+}
