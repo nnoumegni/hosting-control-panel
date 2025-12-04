@@ -72,7 +72,7 @@ export default function DomainsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedDomain, setSelectedDomain] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'info' | 'ssl' | 'email' | 'ftp' | 'dns'>('info');
+  const [activeTab, setActiveTab] = useState<'info' | 'ssl' | 'email' | 'ftp'>('info');
   const [dnsLookupDomain, setDnsLookupDomain] = useState<string | null>(null);
   const [showDnsLookupForm, setShowDnsLookupForm] = useState(false);
   const [dnsLookupError, setDnsLookupError] = useState<string | null>(null);
@@ -1053,7 +1053,6 @@ export default function DomainsPage() {
                         setDnsLookupError(null);
                         setDnsLookupDomain(domain);
                         setShowDnsLookupForm(true);
-                        setActiveTab('dns');
                         setSelectedDomain(null);
                         setDnsLookupCompleted(false); // Reset completion state
                         setDnsLookupHasRecords(false); // Reset records state
@@ -1091,7 +1090,6 @@ export default function DomainsPage() {
                         setDnsLookupError(null);
                         setDnsLookupDomain(domain);
                         setShowDnsLookupForm(true);
-                        setActiveTab('dns');
                         setSelectedDomain(null);
                         setDnsLookupCompleted(false); // Reset completion state
                         setDnsLookupHasRecords(false); // Reset records state
@@ -1340,18 +1338,9 @@ export default function DomainsPage() {
               )}
             </div>
             {!showDnsLookupForm && (
-              <button 
-                onClick={() => {
-                  // Focus the DNS lookup input at the top
-                  setTimeout(() => {
-                    const input = document.getElementById('dns-lookup-hostname') as HTMLInputElement;
-                    input?.focus();
-                  }, 100);
-                }}
-                className="bg-emerald-600 text-white px-3 py-1 rounded hover:bg-emerald-700 transition text-sm"
-              >
-                Domain lookup
-              </button>
+              <span className="text-slate-500 text-sm">
+                Manage website
+              </span>
             )}
           </header>
 
@@ -1401,31 +1390,13 @@ export default function DomainsPage() {
                     >
                       FTP Accounts
                     </button>
-                    <button
-                      onClick={() => {
-                        setShowDnsLookupForm(true);
-                        setActiveTab('dns');
-                        setSelectedDomain(null);
-                        setDnsLookupDomain(null);
-                      }}
-                      className={`py-3 border-b-2 transition ${
-                        activeTab === 'dns'
-                          ? 'border-emerald-600 font-medium text-emerald-400'
-                          : 'border-transparent text-slate-400 hover:text-emerald-400'
-                      }`}
-                    >
-                      <div className="flex items-center gap-2">
-                        <Globe className="h-4 w-4" />
-                        DNS Lookup
-                      </div>
-                    </button>
                   </nav>
                 </div>
               )}
 
               {/* Tab Content */}
               <section className="p-6 overflow-y-auto flex-1">
-              {showDnsLookupForm && activeTab === 'dns' && selectedInstanceId && (
+              {showDnsLookupForm && selectedInstanceId && (
                 <DNSLookupPanel 
                   key={`dns-lookup-${dnsLookupDomain || 'new'}`}
                   instanceId={selectedInstanceId}
