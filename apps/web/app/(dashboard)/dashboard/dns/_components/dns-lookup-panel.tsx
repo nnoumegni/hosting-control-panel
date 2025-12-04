@@ -464,6 +464,16 @@ export function DNSLookupPanel({ instanceId, initialHostname, onLookupComplete, 
         </div>
       )}
 
+      {/* Loading State */}
+      {isLoading && hostname && (
+        <div className="bg-slate-900/60 rounded-xl border border-slate-800 p-8 text-center text-slate-400">
+          <Loader2 className="h-12 w-12 mx-auto mb-4 text-emerald-400 animate-spin" />
+          <p className="text-lg font-medium mb-2 text-slate-300">Looking up DNS records...</p>
+          <p className="text-sm text-slate-500">Querying DNS for <span className="font-mono text-slate-300">{hostname}</span></p>
+        </div>
+      )}
+
+      {/* No Results State */}
       {results.size === 0 && !isLoading && !error && hostname && showDetails && (
         <div className="bg-slate-900/60 rounded-xl border border-slate-800 p-8 text-center text-slate-400">
           <Globe className="h-12 w-12 mx-auto mb-4 text-slate-500" />
