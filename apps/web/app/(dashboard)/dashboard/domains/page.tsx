@@ -76,6 +76,8 @@ export default function DomainsPage() {
   const [dnsLookupDomain, setDnsLookupDomain] = useState<string | null>(null);
   const [showDnsLookupForm, setShowDnsLookupForm] = useState(false);
   const [dnsLookupError, setDnsLookupError] = useState<string | null>(null);
+  const [dnsLookupHasRecords, setDnsLookupHasRecords] = useState<boolean>(false);
+  const [dnsLookupCompleted, setDnsLookupCompleted] = useState<boolean>(false);
   const [dnsRecords, setDnsRecords] = useState<ZoneRecords | null>(null);
   const [sslCertificates, setSslCertificates] = useState<SSLCertificate[]>([]);
   const [isLoadingDns, setIsLoadingDns] = useState(false);
@@ -1053,6 +1055,8 @@ export default function DomainsPage() {
                         setShowDnsLookupForm(true);
                         setActiveTab('dns');
                         setSelectedDomain(null);
+                        setDnsLookupCompleted(false); // Reset completion state
+                        setDnsLookupHasRecords(false); // Reset records state
                         e.currentTarget.value = '';
                         } else {
                           // Show error for invalid domain
@@ -1089,6 +1093,8 @@ export default function DomainsPage() {
                         setShowDnsLookupForm(true);
                         setActiveTab('dns');
                         setSelectedDomain(null);
+                        setDnsLookupCompleted(false); // Reset completion state
+                        setDnsLookupHasRecords(false); // Reset records state
                         input.value = '';
                         } else {
                           // Show error for invalid domain
@@ -1111,7 +1117,7 @@ export default function DomainsPage() {
         {/* Domain Sidebar */}
         <aside className="bg-slate-900/60 rounded-xl border border-slate-800 p-4">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xs font-semibold text-slate-400 uppercase">Hosted Websites</h2>
+            <h2 className="text-xs font-semibold text-slate-400 uppercase px-2">Hosted Websites</h2>
             <button
               onClick={() => setIsAddDomainModalOpen(true)}
               className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded transition-colors"
@@ -1159,20 +1165,18 @@ export default function DomainsPage() {
                           <li
                             key={domainName}
                             onClick={() => setSelectedDomain(domainName)}
-                            className={`px-2 py-2 rounded-md hover:bg-slate-800 cursor-pointer transition text-sm flex items-center ${
+                            className={`px-2 py-2 rounded-md hover:bg-slate-800 cursor-pointer transition text-sm flex items-center justify-between gap-2 ${
                               selectedDomain === domainName
                                 ? 'bg-slate-800 text-white font-medium'
                                 : 'text-slate-300'
                             }`}
                           >
-                            <div className="flex items-center gap-2 min-w-0 flex-1">
-                              {hasSsl ? (
-                                <Lock className="h-4 w-4 text-emerald-400 flex-shrink-0" />
-                              ) : (
-                                <Unlock className="h-4 w-4 text-rose-400 flex-shrink-0" />
-                              )}
-                              <span className="truncate">{domainName}</span>
-                            </div>
+                            <span className="truncate min-w-0 flex-1">{domainName}</span>
+                            {hasSsl ? (
+                              <Lock className="h-4 w-4 text-emerald-400 flex-shrink-0" />
+                            ) : (
+                              <Unlock className="h-4 w-4 text-rose-400 flex-shrink-0" />
+                            )}
                           </li>
                         );
                       })}
@@ -1204,20 +1208,18 @@ export default function DomainsPage() {
                 <li
                   key={domain.domain}
                   onClick={() => setSelectedDomain(domain.domain)}
-                        className={`px-2 py-2 rounded-md hover:bg-slate-800 cursor-pointer transition text-sm flex items-center ${
+                        className={`px-2 py-2 rounded-md hover:bg-slate-800 cursor-pointer transition text-sm flex items-center justify-between gap-2 ${
                     selectedDomain === domain.domain
                       ? 'bg-slate-800 text-white font-medium'
                       : 'text-slate-300'
                   }`}
                 >
-                        <div className="flex items-center gap-2 min-w-0 flex-1">
+                        <span className="truncate min-w-0 flex-1">{domain.domain}</span>
                           {hasSsl ? (
                             <Lock className="h-4 w-4 text-emerald-400 flex-shrink-0" />
                           ) : (
                             <Unlock className="h-4 w-4 text-rose-400 flex-shrink-0" />
                           )}
-                          <span className="truncate">{domain.domain}</span>
-                        </div>
                       </li>
                     );
                   })}
@@ -1329,59 +1331,20 @@ export default function DomainsPage() {
                 </h2>
               )}
             </div>
-            {(() => {
-              // Check if domain is available (not in managed domains) and is a valid top-level domain
-              const domainToCheck = currentDomain?.domain || dnsLookupDomain;
-              const isValidDomain = domainToCheck && isValidDomainName(domainToCheck);
-              const isTopLevel = domainToCheck && isTopLevelDomain(domainToCheck);
-              const isDomainAvailable = domainToCheck && !managedDomains.some(d => d.domain.toLowerCase() === domainToCheck.toLowerCase());
-              
-              // Only show "Buy this domain" for valid top-level domains that are available
-              if (isDomainAvailable && domainToCheck && isValidDomain && isTopLevel) {
-                return (
-                  <button 
-                    onClick={() => setIsAddDomainModalOpen(true)}
-                    className="bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700 transition text-sm"
-                  >
-                    Buy this domain
-                  </button>
-                );
-              }
-              
-              if (showDnsLookupForm) {
-                return (
-                  <button 
-                    onClick={() => {
-                      setShowDnsLookupForm(false);
-                      if (currentDomain) {
-                        setActiveTab('info');
-                      } else {
-                        setActiveTab('info');
-                        setSelectedDomain(null);
-                      }
-                    }}
-                    className="bg-slate-600 text-white px-3 py-1 rounded hover:bg-slate-700 transition text-sm"
-                  >
-                    Back
-                  </button>
-                );
-              }
-              
-              return (
-                <button 
-                  onClick={() => {
-                    // Focus the DNS lookup input at the top
-                    setTimeout(() => {
-                      const input = document.getElementById('dns-lookup-hostname') as HTMLInputElement;
-                      input?.focus();
-                    }, 100);
-                  }}
-                  className="bg-emerald-600 text-white px-3 py-1 rounded hover:bg-emerald-700 transition text-sm"
-                >
-                  Domain lookup
-                </button>
-              );
-            })()}
+            {!showDnsLookupForm && (
+              <button 
+                onClick={() => {
+                  // Focus the DNS lookup input at the top
+                  setTimeout(() => {
+                    const input = document.getElementById('dns-lookup-hostname') as HTMLInputElement;
+                    input?.focus();
+                  }, 100);
+                }}
+                className="bg-emerald-600 text-white px-3 py-1 rounded hover:bg-emerald-700 transition text-sm"
+              >
+                Domain lookup
+              </button>
+            )}
           </header>
 
           {(currentDomain && !showDnsLookupForm) || showDnsLookupForm ? (
@@ -1462,6 +1425,14 @@ export default function DomainsPage() {
                   triggerLookup={dnsLookupDomain || undefined}
                   showDetailsByDefault={false}
                   hideSearchForm={true}
+                  onLookupResults={(hasRecords, domain) => {
+                    setDnsLookupHasRecords(hasRecords);
+                    setDnsLookupCompleted(true);
+                  }}
+                  onBuyDomain={(domain) => {
+                    setIsAddDomainModalOpen(true);
+                  }}
+                  managedDomains={managedDomains.map(d => d.domain)}
                 />
               )}
               {!showDnsLookupForm && activeTab === 'info' && currentDomain && (

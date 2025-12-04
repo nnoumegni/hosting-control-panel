@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Loader2, Search, Copy, CheckCircle2, XCircle, Globe, Mail, Server, Link2, Activity, Filter } from 'lucide-react';
 import { apiFetch } from '../../../../../lib/api';
-import { isValidDomainName } from '../../../../../lib/domain-validation';
+import { isValidDomainName, isTopLevelDomain } from '../../../../../lib/domain-validation';
 import type { DNSRecord } from '../../../../../hooks/use-dns-lookup';
 
 type DNSRecordType = 'A' | 'AAAA' | 'CNAME' | 'MX' | 'NS' | 'TXT' | 'SOA' | 'SRV' | 'PTR';
@@ -33,10 +33,13 @@ interface DNSLookupPanelProps {
   instanceId: string;
   initialHostname?: string;
   onLookupComplete?: (domain: string) => void;
+  onLookupResults?: (hasRecords: boolean, domain: string) => void; // Callback with lookup results
   showDetailsByDefault?: boolean;
   hideSearchForm?: boolean;
   autoLookup?: boolean;
   triggerLookup?: string; // When this changes, trigger a lookup
+  onBuyDomain?: (domain: string) => void; // Callback for "Buy this domain" button
+  managedDomains?: string[]; // List of managed domains to check availability
 }
 
 const RECORD_TYPE_OPTIONS: { value: DNSRecordType; label: string; description: string; icon: typeof Globe; color: string }[] = [
@@ -51,7 +54,7 @@ const RECORD_TYPE_OPTIONS: { value: DNSRecordType; label: string; description: s
   { value: 'PTR', label: 'PTR', description: 'Reverse DNS', icon: Globe, color: 'text-pink-400' },
 ];
 
-export function DNSLookupPanel({ instanceId, initialHostname, onLookupComplete, showDetailsByDefault = true, hideSearchForm = false, autoLookup = false, triggerLookup }: DNSLookupPanelProps) {
+export function DNSLookupPanel({ instanceId, initialHostname, onLookupComplete, onLookupResults, showDetailsByDefault = true, hideSearchForm = false, autoLookup = false, triggerLookup, onBuyDomain, managedDomains = [] }: DNSLookupPanelProps) {
   const [hostname, setHostname] = useState(initialHostname || '');
   
   // Update hostname when initialHostname changes
@@ -175,6 +178,16 @@ export function DNSLookupPanel({ instanceId, initialHostname, onLookupComplete, 
         if (lastLookupRef.current === lookupHostname) {
           setResults(newResults);
           setShowDetails(true);
+          
+          // Notify parent component of lookup completion (only if still the current lookup)
+          if (onLookupComplete) {
+            onLookupComplete(lookupHostname);
+          }
+          // Notify parent about lookup results (hasRecords, domain)
+          if (onLookupResults) {
+            const hasRecords = newResults.size > 0;
+            onLookupResults(hasRecords, lookupHostname);
+          }
         }
       } catch (err: any) {
         // Only update error if this is still the current lookup
@@ -183,6 +196,11 @@ export function DNSLookupPanel({ instanceId, initialHostname, onLookupComplete, 
           setError(errorMessage);
           setResults(new Map());
           setShowDetails(false);
+          
+          // Notify parent that lookup completed with error (no records found)
+          if (onLookupResults) {
+            onLookupResults(false, lookupHostname);
+          }
         }
       } finally {
         // Only update loading state if this is still the current lookup
@@ -480,6 +498,18 @@ export function DNSLookupPanel({ instanceId, initialHostname, onLookupComplete, 
           <p className="text-lg font-medium mb-2">No DNS records found</p>
           <p className="text-sm text-slate-500">No DNS records were found for <span className="font-mono text-slate-300">{hostname}</span></p>
           <p className="text-xs text-slate-600 mt-2">This could mean the domain is not configured with DNS records, or the DNS lookup failed silently.</p>
+          
+          {/* Show "Buy this domain" button if domain is available */}
+          {onBuyDomain && hostname && isValidDomainName(hostname) && isTopLevelDomain(hostname) && !managedDomains.some(d => d.toLowerCase() === hostname.toLowerCase()) && (
+            <div className="mt-6">
+              <button 
+                onClick={() => onBuyDomain(hostname)}
+                className="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 transition text-sm font-medium"
+              >
+                Buy this domain
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>
