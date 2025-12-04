@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { X, Loader2, AlertCircle } from 'lucide-react';
+import { isValidDomainName } from '../../../../../lib/domain-validation';
 
 interface AddDomainModalProps {
   isOpen: boolean;
@@ -23,15 +24,16 @@ export function AddDomainModal({ isOpen, onClose, onAdd }: AddDomainModalProps) 
     e.preventDefault();
     setError(null);
 
-    if (!domain.trim()) {
+    const trimmedDomain = domain.trim();
+    
+    if (!trimmedDomain) {
       setError('Domain name is required');
       return;
     }
 
-    // Basic domain validation
-    const domainRegex = /^([a-z0-9]+(-[a-z0-9]+)*\.)+[a-z]{2,}$/i;
-    if (!domainRegex.test(domain.trim())) {
-      setError('Please enter a valid domain name (e.g., example.com)');
+    // Use shared domain validation function
+    if (!isValidDomainName(trimmedDomain)) {
+      setError('Please enter a valid domain name (e.g., example.com, www.example.com)');
       return;
     }
 

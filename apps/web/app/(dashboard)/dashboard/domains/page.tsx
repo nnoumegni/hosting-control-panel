@@ -3,7 +3,10 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { Loader2, Plus, Trash2, Lock, Unlock, ExternalLink } from 'lucide-react';
 import { apiFetch } from '../../../../lib/api';
+import { getSelectedInstanceId } from '../../../../lib/instance-utils';
+import { isValidDomainName, filterValidDomains } from '../../../../lib/domain-validation';
 import { useDomains } from '../../../../hooks/use-domains';
+import { useSSLStatus } from '../../../../hooks/use-ssl-status';
 import { WebServerInstallPanel } from './_components/web-server-install-panel';
 import { AddDomainModal } from './_components/add-domain-modal';
 import { DeleteConfirmationModal } from './_components/delete-confirmation-modal';
@@ -87,6 +90,32 @@ export default function DomainsPage() {
   const [hasInstanceId, setHasInstanceId] = useState<boolean | null>(null); // null = checking, true = has it, false = doesn't have it
   const isInitializingRef = useRef(false);
   
+  // Selected instance ID state (for hooks that need it)
+  const [selectedInstanceId, setSelectedInstanceId] = useState<string | null>(() => {
+    if (typeof window !== 'undefined') {
+      return getSelectedInstanceId();
+    }
+    return null;
+  });
+
+  // Listen for instance changes
+  useEffect(() => {
+    const handleInstanceChange = () => {
+      const newInstanceId = getSelectedInstanceId();
+      setSelectedInstanceId(newInstanceId);
+    };
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('storage', handleInstanceChange);
+      window.addEventListener('ec2-instance-selected', handleInstanceChange);
+
+      return () => {
+        window.removeEventListener('storage', handleInstanceChange);
+        window.removeEventListener('ec2-instance-selected', handleInstanceChange);
+      };
+    }
+  }, []);
+  
   // Web server installation state
   const [isInstallingWebServer, setIsInstallingWebServer] = useState(false);
   const [webServerInstallProgress, setWebServerInstallProgress] = useState<string>('');
@@ -99,9 +128,22 @@ export default function DomainsPage() {
 
   // Domain management state - use shared hook
   const { domains: managedDomains, isLoading: isLoadingDomains, refreshDomains: refreshManagedDomains } = useDomains({
-    deduplicate: true,
+    instanceId: selectedInstanceId,
     autoLoad: false, // We'll load manually after serverInfo loads
   });
+
+  // Use shared SSL status hook to check certificate status (consistent with SSL page)
+  const { hasActiveCertificate, refreshCertificates: refreshSSLStatus } = useSSLStatus({
+    instanceId: selectedInstanceId,
+    autoLoad: !!selectedInstanceId,
+  });
+
+  // Refresh SSL status when domains are refreshed or server info changes
+  useEffect(() => {
+    if (selectedInstanceId && serverInfo) {
+      void refreshSSLStatus();
+    }
+  }, [selectedInstanceId, serverInfo, refreshSSLStatus]);
   const [isAddDomainModalOpen, setIsAddDomainModalOpen] = useState(false);
   const [, setIsCreatingDomain] = useState(false);
   
@@ -109,20 +151,7 @@ export default function DomainsPage() {
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [domainToDelete, setDomainToDelete] = useState<{ id: string; name: string } | null>(null);
 
-  // Get selected instance ID from localStorage (set by EC2 dropdown)
-  const getSelectedInstanceId = (): string | null => {
-    if (typeof window === 'undefined') return null;
-    try {
-      const instanceId = localStorage.getItem('hosting-control-panel:selected-ec2-instance');
-      // Validate that it's not empty and looks like an instance ID
-      if (instanceId && instanceId.trim().length > 0 && instanceId.startsWith('i-')) {
-        return instanceId.trim();
-      }
-      return null;
-    } catch {
-      return null;
-    }
-  };
+  // Note: getSelectedInstanceId is now imported from lib/instance-utils
 
   // Load SES email identities (filtered by selected domain) - must be declared before effects that reference it
   const loadEmailIdentities = useCallback(async () => {
@@ -1016,11 +1045,13 @@ export default function DomainsPage() {
           {/* Merge managed domains with detected domains from server config */}
           {(() => {
             // Convert managed domains to the format expected by the simple list
-            const managedDomainNames = managedDomains.map(d => d.domain);
-            const detectedDomainNames = serverInfo?.domains.map(d => d.domain) || [];
+            // Filter to only include valid domain names
+            const managedDomainNames = filterValidDomains(managedDomains.map(d => d.domain));
+            const detectedDomainNames = filterValidDomains(serverInfo?.domains.map(d => d.domain) || []);
             
             // Combine both lists, removing duplicates (prioritize managed domains)
-            const allDomainNames = [...new Set([...managedDomainNames, ...detectedDomainNames])];
+            // Filter again to ensure all are valid
+            const allDomainNames = [...new Set([...managedDomainNames, ...detectedDomainNames])].filter(isValidDomainName);
             
             // If we have managed domains, show the full DomainList component
             if (managedDomains.length > 0 || isLoadingDomains) {
@@ -1041,56 +1072,27 @@ export default function DomainsPage() {
                         const isManaged = managedDomainNames.includes(domainName);
                         const managedDomain = managedDomains.find(d => d.domain === domainName);
                         const detectedDomain = serverInfo?.domains.find(d => d.domain === domainName);
-                        // Icons as initially implemented: rely on sslEnabled flags only
-                        const hasSsl = (managedDomain?.sslEnabled ?? false) || (detectedDomain?.sslEnabled ?? false);
+                        // Use shared SSL status check (consistent with SSL page) - checks for active certificate status
+                        const hasSsl = hasActiveCertificate(domainName);
                         const url = `${hasSsl ? 'https' : 'http'}://${domainName}`;
                         
                         return (
                           <li
                             key={domainName}
                             onClick={() => setSelectedDomain(domainName)}
-                            className={`px-2 py-2 rounded-md hover:bg-slate-800 cursor-pointer transition text-sm flex items-center justify-between ${
+                            className={`px-2 py-2 rounded-md hover:bg-slate-800 cursor-pointer transition text-sm flex items-center ${
                               selectedDomain === domainName
                                 ? 'bg-slate-800 text-white font-medium'
                                 : 'text-slate-300'
                             }`}
                           >
-                            <div className="flex items-center gap-2 min-w-0">
+                            <div className="flex items-center gap-2 min-w-0 flex-1">
                               {hasSsl ? (
                                 <Lock className="h-4 w-4 text-emerald-400 flex-shrink-0" />
                               ) : (
                                 <Unlock className="h-4 w-4 text-rose-400 flex-shrink-0" />
                               )}
                               <span className="truncate">{domainName}</span>
-                            </div>
-                            <div className="flex items-center gap-2 flex-shrink-0">
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  window.open(url, '_blank', 'noopener,noreferrer');
-                                }}
-                                className="p-1 text-slate-400 hover:text-slate-200 hover:bg-slate-700/60 rounded transition"
-                                title="Open site"
-                              >
-                                <ExternalLink className="h-4 w-4" />
-                              </button>
-                              {isManaged && managedDomain && (
-                                <div className="flex items-center gap-1 ml-2 flex-shrink-0">
-                                  <button
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleDeleteDomainClick(
-                                        managedDomain._id || managedDomain.domain,
-                                        managedDomain.domain
-                                      );
-                                    }}
-                                    className="p-1 text-slate-400 hover:text-red-400 hover:bg-red-500/10 rounded transition-colors"
-                                    title="Delete website"
-                                  >
-                                    <Trash2 className="h-3 w-3" />
-                                  </button>
-                                </div>
-                              )}
                             </div>
                           </li>
                         );
@@ -1101,22 +1103,35 @@ export default function DomainsPage() {
               );
             } else if (serverInfo && serverInfo.domains.length > 0) {
               // Show simple list if only detected domains
+              // Filter to only show valid domain names
+              const validDetectedDomains = filterValidDomains(serverInfo.domains);
+              
+              if (validDetectedDomains.length === 0) {
+                return (
+                  <div className="text-center py-4 text-slate-400 text-sm">
+                    <p>No valid websites found.</p>
+                    <p className="text-xs mt-1">All detected domains have invalid names.</p>
+                  </div>
+                );
+              }
+              
               return (
                 <ul className="space-y-1 max-h-[400px] overflow-auto">
-                  {serverInfo.domains.map((domain) => {
-                    const hasSsl = domain.sslEnabled ?? false;
+                  {validDetectedDomains.map((domain) => {
+                    // Use shared SSL status check (consistent with SSL page) - checks for active certificate status
+                    const hasSsl = hasActiveCertificate(domain.domain);
                     const url = `${hasSsl ? 'https' : 'http'}://${domain.domain}`;
                     return (
                 <li
                   key={domain.domain}
                   onClick={() => setSelectedDomain(domain.domain)}
-                        className={`px-2 py-2 rounded-md hover:bg-slate-800 cursor-pointer transition text-sm flex items-center justify-between ${
+                        className={`px-2 py-2 rounded-md hover:bg-slate-800 cursor-pointer transition text-sm flex items-center ${
                     selectedDomain === domain.domain
                       ? 'bg-slate-800 text-white font-medium'
                       : 'text-slate-300'
                   }`}
                 >
-                        <div className="flex items-center gap-2 min-w-0">
+                        <div className="flex items-center gap-2 min-w-0 flex-1">
                           {hasSsl ? (
                             <Lock className="h-4 w-4 text-emerald-400 flex-shrink-0" />
                           ) : (
@@ -1124,16 +1139,6 @@ export default function DomainsPage() {
                           )}
                           <span className="truncate">{domain.domain}</span>
                         </div>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            window.open(url, '_blank', 'noopener,noreferrer');
-                          }}
-                          className="p-1 text-slate-400 hover:text-slate-200 hover:bg-slate-700/60 rounded transition"
-                          title="Open site"
-                        >
-                          <ExternalLink className="h-4 w-4" />
-                        </button>
                       </li>
                     );
                   })}
@@ -1189,9 +1194,62 @@ export default function DomainsPage() {
         <main className="flex flex-col bg-slate-900/60 rounded-xl border border-slate-800 overflow-hidden">
           {/* Header */}
           <header className="flex items-center justify-between p-4 bg-slate-900/80 border-b border-slate-800">
-            <h2 className="text-lg font-semibold text-white">
-              {currentDomain?.domain ?? 'Select a website'}
-            </h2>
+            <div className="flex items-center gap-2">
+              {currentDomain?.domain && (
+                <>
+                  {hasActiveCertificate(currentDomain.domain) ? (
+                    <Lock className="h-5 w-5 text-emerald-400 flex-shrink-0" />
+                  ) : (
+                    <Unlock className="h-5 w-5 text-rose-400 flex-shrink-0" />
+                  )}
+                </>
+              )}
+              {currentDomain?.domain ? (
+                <>
+                  {(() => {
+                    const hasSsl = hasActiveCertificate(currentDomain.domain);
+                    const url = `${hasSsl ? 'https' : 'http'}://${currentDomain.domain}`;
+                    const isManaged = managedDomains.some(d => d.domain === currentDomain.domain);
+                    const managedDomain = managedDomains.find(d => d.domain === currentDomain.domain);
+                    
+                    return (
+                      <>
+                        <h2
+                          onClick={() => window.open(url, '_blank', 'noopener,noreferrer')}
+                          className="text-lg font-semibold text-white cursor-pointer hover:text-emerald-400 transition-colors"
+                          title="Click to visit website"
+                        >
+                          {currentDomain.domain}
+                        </h2>
+                        <button
+                          onClick={() => window.open(url, '_blank', 'noopener,noreferrer')}
+                          className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded transition"
+                          title="Visit website"
+                        >
+                          <ExternalLink className="h-4 w-4" />
+                        </button>
+                        {isManaged && managedDomain && (
+                          <button
+                            onClick={() => handleDeleteDomainClick(
+                              managedDomain._id || managedDomain.domain,
+                              managedDomain.domain
+                            )}
+                            className="p-2 text-slate-400 hover:text-red-400 hover:bg-red-500/10 rounded transition"
+                            title="Delete website"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        )}
+                      </>
+                    );
+                  })()}
+                </>
+              ) : (
+                <h2 className="text-lg font-semibold text-white">
+                  Select a website
+                </h2>
+              )}
+            </div>
             <button 
               onClick={() => setIsAddDomainModalOpen(true)}
               className="bg-emerald-600 text-white px-3 py-1 rounded hover:bg-emerald-700 transition text-sm"
@@ -1401,7 +1459,7 @@ export default function DomainsPage() {
                       <div className="flex justify-between">
                         <span className="text-slate-400">SSL Enabled:</span>
                         <span className="text-slate-200">
-                          {currentDomain.sslEnabled ? 'Yes' : 'No'}
+                          {hasActiveCertificate(currentDomain.domain) ? 'Yes' : 'No'}
                         </span>
                       </div>
                       {currentDomain.sslCertificate && (

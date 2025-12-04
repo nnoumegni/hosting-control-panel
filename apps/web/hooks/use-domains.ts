@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { apiFetch } from '../lib/api';
 import { getSelectedInstanceId } from '../lib/instance-utils';
+import { isValidDomainName, filterValidDomains } from '../lib/domain-validation';
 
 export interface Domain {
   _id: string;
@@ -98,6 +99,9 @@ export function useDomains(options: UseDomainsOptions = {}): UseDomainsReturn {
       );
       
       let domainsList = response.domains || [];
+      
+      // Filter out invalid domain names first
+      domainsList = filterValidDomains(domainsList);
       
       // Deduplicate by domain name if enabled
       if (deduplicate && domainsList.length > 0) {
