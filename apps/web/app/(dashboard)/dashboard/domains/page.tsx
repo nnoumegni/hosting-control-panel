@@ -1164,7 +1164,11 @@ export default function DomainsPage() {
                         return (
                           <li
                             key={domainName}
-                            onClick={() => setSelectedDomain(domainName)}
+                            onClick={() => {
+                              setSelectedDomain(domainName);
+                              setShowDnsLookupForm(false);
+                              setActiveTab('info');
+                            }}
                             className={`px-2 py-2 rounded-md hover:bg-slate-800 cursor-pointer transition text-sm flex items-center justify-between gap-2 ${
                               selectedDomain === domainName
                                 ? 'bg-slate-800 text-white font-medium'
@@ -1207,7 +1211,11 @@ export default function DomainsPage() {
                     return (
                 <li
                   key={domain.domain}
-                  onClick={() => setSelectedDomain(domain.domain)}
+                  onClick={() => {
+                    setSelectedDomain(domain.domain);
+                    setShowDnsLookupForm(false);
+                    setActiveTab('info');
+                  }}
                         className={`px-2 py-2 rounded-md hover:bg-slate-800 cursor-pointer transition text-sm flex items-center justify-between gap-2 ${
                     selectedDomain === domain.domain
                       ? 'bg-slate-800 text-white font-medium'
