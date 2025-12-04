@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from 'react';
-import { Loader2, Plus, Trash2, Edit2, TestTube, Server, CheckCircle2, XCircle, AlertCircle } from 'lucide-react';
+import { Loader2, Plus, Trash2, Edit2, TestTube, Server, CheckCircle2, XCircle, AlertCircle, Info } from 'lucide-react';
 import { apiFetch } from '../../../../../lib/api';
 import { CreateFtpAccountModal } from './create-ftp-account-modal';
 import { EditFtpAccountModal } from './edit-ftp-account-modal';
@@ -59,6 +59,7 @@ export function FtpAccountsPanel({ domain, instanceId }: FtpAccountsPanelProps) 
   const [selectedAccount, setSelectedAccount] = useState<FtpAccount | null>(null);
   const [isInstalling, setIsInstalling] = useState(false);
   const [installProgress, setInstallProgress] = useState<string>('');
+  const [isStatusPopupOpen, setIsStatusPopupOpen] = useState(false);
 
   const loadServerStatus = useCallback(async () => {
     try {
@@ -240,114 +241,22 @@ export function FtpAccountsPanel({ domain, instanceId }: FtpAccountsPanelProps) 
 
   return (
     <div className="space-y-6">
-      {/* FTP Server Status */}
-      <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-6">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-2">
-            <Server className="h-5 w-5 text-slate-400" />
-            <h3 className="text-lg font-semibold text-white">FTP Server Status</h3>
-          </div>
-          <button
-            onClick={() => void loadServerStatus()}
-            disabled={isLoadingServer}
-            className="text-sm text-emerald-400 hover:text-emerald-300 disabled:opacity-50"
-          >
-            {isLoadingServer ? (
-              <span className="flex items-center gap-2">
-                <Loader2 className="h-4 w-4 animate-spin" />
-                Loading...
-              </span>
-            ) : (
-              'Refresh'
-            )}
-          </button>
-        </div>
-
-        {serverError && (
-          <div className="mb-4 rounded-lg border border-rose-500/40 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">
-            {serverError}
-          </div>
-        )}
-
-        {isLoadingServer ? (
-          <div className="text-center py-4 text-slate-400">Loading server status...</div>
-        ) : serverStatus ? (
-          <div className="space-y-3">
-            {serverStatus.installed ? (
-              <>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-slate-400">Status:</span>
-                  <div className="flex items-center gap-2">
-                    {serverStatus.running ? (
-                      <>
-                        <CheckCircle2 className="h-4 w-4 text-emerald-400" />
-                        <span className="text-sm text-emerald-400 font-medium">Running</span>
-                      </>
-                    ) : (
-                      <>
-                        <XCircle className="h-4 w-4 text-rose-400" />
-                        <span className="text-sm text-rose-400 font-medium">Stopped</span>
-                      </>
-                    )}
-                  </div>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-slate-400">Server:</span>
-                  <span className="text-sm text-slate-200">
-                    {serverStatus.serverType} {serverStatus.version ? `v${serverStatus.version}` : ''}
-                  </span>
-                </div>
-                {serverStatus.port && (
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-slate-400">Port:</span>
-                    <span className="text-sm text-slate-200">{serverStatus.port}</span>
-                  </div>
-                )}
-                {serverStatus.passivePorts && (
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-slate-400">Passive Ports:</span>
-                    <span className="text-sm text-slate-200">
-                      {serverStatus.passivePorts.min}-{serverStatus.passivePorts.max}
-                    </span>
-                  </div>
-                )}
-              </>
-            ) : (
-              <div className="space-y-3">
-                <div className="flex items-center gap-2 text-amber-300">
-                  <AlertCircle className="h-4 w-4" />
-                  <span className="text-sm">FTP server is not installed</span>
-                </div>
-                {isInstalling ? (
-                  <div className="flex items-start gap-2 text-sm text-amber-300/90">
-                    <Loader2 className="h-4 w-4 animate-spin mt-0.5 flex-shrink-0" />
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium">Installing...</p>
-                      {installProgress && (
-                        <p className="text-xs text-amber-400/70 mt-1 truncate" title={installProgress}>
-                          {installProgress}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                ) : (
-                  <button
-                    onClick={() => handleInstallServer({ configureFirewall: true, enableTLS: true })}
-                    className="w-full px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-md text-sm font-medium transition"
-                  >
-                    Install vsftpd
-                  </button>
-                )}
-              </div>
-            )}
-          </div>
-        ) : null}
-      </div>
-
       {/* FTP Accounts */}
       <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-6">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold text-white">FTP Accounts</h3>
+          <div className="flex items-center gap-2">
+            <h3 className="text-lg font-semibold text-white">FTP Accounts</h3>
+            <button
+              onClick={() => {
+                void loadServerStatus();
+                setIsStatusPopupOpen(true);
+              }}
+              className="p-1 text-slate-400 hover:text-slate-300 hover:bg-slate-800 rounded transition"
+              title="View FTP server status"
+            >
+              <Info className="h-4 w-4" />
+            </button>
+          </div>
           <div className="flex items-center gap-3">
             <button
               onClick={() => void loadAccounts()}
@@ -515,6 +424,137 @@ export function FtpAccountsPanel({ domain, instanceId }: FtpAccountsPanelProps) 
           }}
           onTest={handleTestAccount}
         />
+      )}
+
+      {/* FTP Server Status Popup */}
+      {isStatusPopupOpen && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50" onClick={() => setIsStatusPopupOpen(false)}>
+          <div
+            className="bg-slate-900 rounded-xl border border-slate-800 p-6 max-w-md w-full mx-4 shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <Server className="h-5 w-5 text-slate-400" />
+                <h3 className="text-lg font-semibold text-white">FTP Server Status</h3>
+              </div>
+              <button
+                onClick={() => setIsStatusPopupOpen(false)}
+                className="p-1 text-slate-400 hover:text-slate-300 hover:bg-slate-800 rounded transition"
+              >
+                <XCircle className="h-5 w-5" />
+              </button>
+            </div>
+
+            {serverError && (
+              <div className="mb-4 rounded-lg border border-rose-500/40 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">
+                {serverError}
+              </div>
+            )}
+
+            {isLoadingServer ? (
+              <div className="text-center py-8 text-slate-400">
+                <Loader2 className="h-6 w-6 animate-spin mx-auto mb-2" />
+                <p>Loading server status...</p>
+              </div>
+            ) : serverStatus ? (
+              <div className="space-y-4">
+                {serverStatus.installed ? (
+                  <>
+                    <div className="flex items-center justify-between py-2 border-b border-slate-800">
+                      <span className="text-sm text-slate-400">Status:</span>
+                      <div className="flex items-center gap-2">
+                        {serverStatus.running ? (
+                          <>
+                            <CheckCircle2 className="h-4 w-4 text-emerald-400" />
+                            <span className="text-sm text-emerald-400 font-medium">Running</span>
+                          </>
+                        ) : (
+                          <>
+                            <XCircle className="h-4 w-4 text-rose-400" />
+                            <span className="text-sm text-rose-400 font-medium">Stopped</span>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between py-2 border-b border-slate-800">
+                      <span className="text-sm text-slate-400">Server:</span>
+                      <span className="text-sm text-slate-200">
+                        {serverStatus.serverType} {serverStatus.version ? `v${serverStatus.version}` : ''}
+                      </span>
+                    </div>
+                    {serverStatus.port && (
+                      <div className="flex items-center justify-between py-2 border-b border-slate-800">
+                        <span className="text-sm text-slate-400">Port:</span>
+                        <span className="text-sm text-slate-200">{serverStatus.port}</span>
+                      </div>
+                    )}
+                    {serverStatus.passivePorts && (
+                      <div className="flex items-center justify-between py-2 border-b border-slate-800">
+                        <span className="text-sm text-slate-400">Passive Ports:</span>
+                        <span className="text-sm text-slate-200">
+                          {serverStatus.passivePorts.min}-{serverStatus.passivePorts.max}
+                        </span>
+                      </div>
+                    )}
+                    {serverStatus.configPath && (
+                      <div className="flex items-center justify-between py-2">
+                        <span className="text-sm text-slate-400">Config:</span>
+                        <span className="text-sm text-slate-200 font-mono text-xs">{serverStatus.configPath}</span>
+                      </div>
+                    )}
+                    <div className="pt-4 flex gap-2">
+                      <button
+                        onClick={() => void loadServerStatus()}
+                        disabled={isLoadingServer}
+                        className="flex-1 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-md text-sm font-medium transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                      >
+                        {isLoadingServer ? (
+                          <>
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                            Loading...
+                          </>
+                        ) : (
+                          <>
+                            <Server className="h-4 w-4" />
+                            Refresh
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </>
+                ) : (
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-2 text-amber-300 py-2">
+                      <AlertCircle className="h-4 w-4" />
+                      <span className="text-sm">FTP server is not installed</span>
+                    </div>
+                    {isInstalling ? (
+                      <div className="flex items-start gap-2 text-sm text-amber-300/90 py-2">
+                        <Loader2 className="h-4 w-4 animate-spin mt-0.5 flex-shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium">Installing...</p>
+                          {installProgress && (
+                            <p className="text-xs text-amber-400/70 mt-1 truncate" title={installProgress}>
+                              {installProgress}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => handleInstallServer({ configureFirewall: true, enableTLS: true })}
+                        className="w-full px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-md text-sm font-medium transition"
+                      >
+                        Install vsftpd
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+            ) : null}
+          </div>
+        </div>
       )}
     </div>
   );

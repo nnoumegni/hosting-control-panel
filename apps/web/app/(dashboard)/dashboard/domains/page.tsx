@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef, useCallback } from 'react';
-import { Loader2, Plus, Trash2, Edit2, Lock, Unlock, ExternalLink } from 'lucide-react';
+import { Loader2, Plus, Trash2, Lock, Unlock, ExternalLink } from 'lucide-react';
 import { apiFetch } from '../../../../lib/api';
 import { useDomains } from '../../../../hooks/use-domains';
 import { WebServerInstallPanel } from './_components/web-server-install-panel';
@@ -588,10 +588,6 @@ export default function DomainsPage() {
     setDeleteModalOpen(false);
   };
 
-  const editDomain = (domain: any) => {
-    // For now, just show an alert - can be extended to show edit modal
-    alert(`Edit website functionality coming soon!\nWebsite: ${domain.domain}\nDocument Root: ${domain.documentRoot}`);
-  };
 
   const installWebServer = async (config: {
     type: 'nginx' | 'apache';
@@ -1080,16 +1076,6 @@ export default function DomainsPage() {
                               </button>
                               {isManaged && managedDomain && (
                                 <div className="flex items-center gap-1 ml-2 flex-shrink-0">
-                                  <button
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      editDomain(managedDomain);
-                                    }}
-                                    className="p-1 text-slate-400 hover:text-blue-400 hover:bg-blue-500/10 rounded transition-colors"
-                                    title="Edit website"
-                                  >
-                                    <Edit2 className="h-3 w-3" />
-                                  </button>
                                   <button
                                     onClick={(e) => {
                                       e.stopPropagation();
