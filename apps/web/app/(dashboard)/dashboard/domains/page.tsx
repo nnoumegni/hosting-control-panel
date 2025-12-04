@@ -1,12 +1,14 @@
 "use client";
 
 import { useEffect, useState, useRef, useCallback } from 'react';
-import { Loader2, Plus, Trash2, Lock, Unlock, ExternalLink } from 'lucide-react';
+import { Loader2, Plus, Trash2, Lock, Unlock, ExternalLink, Search, Globe } from 'lucide-react';
 import { apiFetch } from '../../../../lib/api';
 import { getSelectedInstanceId } from '../../../../lib/instance-utils';
-import { isValidDomainName, filterValidDomains } from '../../../../lib/domain-validation';
+import { isValidDomainName, filterValidDomains, isTopLevelDomain } from '../../../../lib/domain-validation';
 import { useDomains } from '../../../../hooks/use-domains';
 import { useSSLStatus } from '../../../../hooks/use-ssl-status';
+import { useDNSLookup } from '../../../../hooks/use-dns-lookup';
+import { DNSLookupPanel } from '../dns/_components/dns-lookup-panel';
 import { WebServerInstallPanel } from './_components/web-server-install-panel';
 import { AddDomainModal } from './_components/add-domain-modal';
 import { DeleteConfirmationModal } from './_components/delete-confirmation-modal';
@@ -70,7 +72,10 @@ export default function DomainsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedDomain, setSelectedDomain] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'info' | 'ssl' | 'email' | 'ftp'>('info');
+  const [activeTab, setActiveTab] = useState<'info' | 'ssl' | 'email' | 'ftp' | 'dns'>('info');
+  const [dnsLookupDomain, setDnsLookupDomain] = useState<string | null>(null);
+  const [showDnsLookupForm, setShowDnsLookupForm] = useState(false);
+  const [dnsLookupError, setDnsLookupError] = useState<string | null>(null);
   const [dnsRecords, setDnsRecords] = useState<ZoneRecords | null>(null);
   const [sslCertificates, setSslCertificates] = useState<SSLCertificate[]>([]);
   const [isLoadingDns, setIsLoadingDns] = useState(false);
@@ -1023,9 +1028,83 @@ export default function DomainsPage() {
 
   return (
     <div className="space-y-8">
-      <header className="flex flex-col gap-2">
-        <h1 className="text-2xl font-semibold text-white">EC2 Web Panel</h1>
-        <p className="text-sm text-slate-400">Apache/Nginx Hosting</p>
+      <header className="flex flex-col gap-4">
+        <div className="flex items-start justify-between gap-6">
+          <div>
+            <h1 className="text-2xl font-semibold text-white">EC2 Web Panel</h1>
+            <p className="text-sm text-slate-400">Apache/Nginx Hosting</p>
+          </div>
+          
+          {/* DNS Lookup Search - Aligned right, same width as details panel */}
+          <div className="flex-1 max-w-none lg:max-w-[calc(100%-280px-1.5rem)]">
+            <div className="flex flex-col sm:flex-row gap-4">
+              <div className="flex-1">
+                <input
+                  id="dns-lookup-hostname"
+                  type="text"
+                  placeholder="domain lookup..."
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && e.currentTarget.value.trim()) {
+                      const domain = e.currentTarget.value.trim();
+                      // Validate domain before performing lookup
+                      if (isValidDomainName(domain)) {
+                        setDnsLookupError(null);
+                        setDnsLookupDomain(domain);
+                        setShowDnsLookupForm(true);
+                        setActiveTab('dns');
+                        setSelectedDomain(null);
+                        e.currentTarget.value = '';
+                        } else {
+                          // Show error for invalid domain
+                          setDnsLookupError('Please enter a valid domain name');
+                        }
+                    }
+                  }}
+                  onChange={() => {
+                    // Clear error when user starts typing
+                    if (dnsLookupError) {
+                      setDnsLookupError(null);
+                    }
+                  }}
+                  className={`w-full px-4 py-2 bg-slate-800 border rounded-md text-white placeholder-slate-500 focus:outline-none focus:ring-2 ${
+                    dnsLookupError
+                      ? 'border-rose-500 focus:ring-rose-500 focus:border-rose-500'
+                      : 'border-slate-700 focus:ring-emerald-500 focus:border-transparent'
+                  }`}
+                />
+                {dnsLookupError && (
+                  <p className="mt-2 text-sm text-rose-400">{dnsLookupError}</p>
+                )}
+              </div>
+              <div className="flex items-start">
+                <button
+                  onClick={(e) => {
+                    const input = document.getElementById('dns-lookup-hostname') as HTMLInputElement;
+                    if (input?.value.trim()) {
+                      const domain = input.value.trim();
+                      // Validate domain before performing lookup
+                      if (isValidDomainName(domain)) {
+                        setDnsLookupError(null);
+                        setDnsLookupDomain(domain);
+                        setShowDnsLookupForm(true);
+                        setActiveTab('dns');
+                        setSelectedDomain(null);
+                        input.value = '';
+                        } else {
+                          // Show error for invalid domain
+                          setDnsLookupError('Please enter a valid domain name');
+                        }
+                    }
+                  }}
+                  className="px-6 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-md transition flex items-center gap-2"
+                >
+                  <Search className="h-4 w-4" />
+                  Lookup All Records
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       </header>
 
       <div className="grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-6">
@@ -1246,69 +1325,146 @@ export default function DomainsPage() {
                 </>
               ) : (
                 <h2 className="text-lg font-semibold text-white">
-                  Select a website
+                  {dnsLookupDomain ? `DNS Lookup: ${dnsLookupDomain}` : 'Select a website'}
                 </h2>
               )}
             </div>
-            <button 
-              onClick={() => setIsAddDomainModalOpen(true)}
-              className="bg-emerald-600 text-white px-3 py-1 rounded hover:bg-emerald-700 transition text-sm"
-            >
-              Add Website
-            </button>
+            {(() => {
+              // Check if domain is available (not in managed domains) and is a valid top-level domain
+              const domainToCheck = currentDomain?.domain || dnsLookupDomain;
+              const isValidDomain = domainToCheck && isValidDomainName(domainToCheck);
+              const isTopLevel = domainToCheck && isTopLevelDomain(domainToCheck);
+              const isDomainAvailable = domainToCheck && !managedDomains.some(d => d.domain.toLowerCase() === domainToCheck.toLowerCase());
+              
+              // Only show "Buy this domain" for valid top-level domains that are available
+              if (isDomainAvailable && domainToCheck && isValidDomain && isTopLevel) {
+                return (
+                  <button 
+                    onClick={() => setIsAddDomainModalOpen(true)}
+                    className="bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700 transition text-sm"
+                  >
+                    Buy this domain
+                  </button>
+                );
+              }
+              
+              if (showDnsLookupForm) {
+                return (
+                  <button 
+                    onClick={() => {
+                      setShowDnsLookupForm(false);
+                      if (currentDomain) {
+                        setActiveTab('info');
+                      } else {
+                        setActiveTab('info');
+                        setSelectedDomain(null);
+                      }
+                    }}
+                    className="bg-slate-600 text-white px-3 py-1 rounded hover:bg-slate-700 transition text-sm"
+                  >
+                    Back
+                  </button>
+                );
+              }
+              
+              return (
+                <button 
+                  onClick={() => {
+                    // Focus the DNS lookup input at the top
+                    setTimeout(() => {
+                      const input = document.getElementById('dns-lookup-hostname') as HTMLInputElement;
+                      input?.focus();
+                    }, 100);
+                  }}
+                  className="bg-emerald-600 text-white px-3 py-1 rounded hover:bg-emerald-700 transition text-sm"
+                >
+                  Domain lookup
+                </button>
+              );
+            })()}
           </header>
 
-          {currentDomain ? (
+          {(currentDomain && !showDnsLookupForm) || showDnsLookupForm ? (
             <>
-              {/* Tabs */}
-              <div className="border-b border-slate-800 bg-slate-900/50">
-                <nav className="flex space-x-6 px-6">
-                <button
-                  onClick={() => setActiveTab('info')}
-                  className={`py-3 border-b-2 transition ${
-                    activeTab === 'info'
-                      ? 'border-emerald-600 font-medium text-emerald-400'
-                      : 'border-transparent text-slate-400 hover:text-emerald-400'
-                  }`}
-                >
-                  Website Info
-                </button>
-                <button
-                  onClick={() => setActiveTab('ssl')}
-                  className={`py-3 border-b-2 transition ${
-                    activeTab === 'ssl'
-                      ? 'border-emerald-600 font-medium text-emerald-400'
-                      : 'border-transparent text-slate-400 hover:text-emerald-400'
-                  }`}
-                >
-                  SSL Certificates
-                </button>
-                <button
-                  onClick={() => setActiveTab('email')}
-                  className={`py-3 border-b-2 transition ${
-                    activeTab === 'email'
-                      ? 'border-emerald-600 font-medium text-emerald-400'
-                      : 'border-transparent text-slate-400 hover:text-emerald-400'
-                  }`}
-                >
-                  Identity (Email)
-                </button>
-                <button
-                  onClick={() => setActiveTab('ftp')}
-                  className={`py-3 border-b-2 transition ${
-                    activeTab === 'ftp'
-                      ? 'border-emerald-600 font-medium text-emerald-400'
-                      : 'border-transparent text-slate-400 hover:text-emerald-400'
-                  }`}
-                >
-                  FTP Accounts
-                </button>
-              </nav>
-            </div>
+              {/* Tabs - Only show if domain is selected and DNS lookup is not active */}
+              {currentDomain && !showDnsLookupForm && (
+                <div className="border-b border-slate-800 bg-slate-900/50">
+                  <nav className="flex space-x-6 px-6">
+                    <button
+                      onClick={() => setActiveTab('info')}
+                      className={`py-3 border-b-2 transition ${
+                        activeTab === 'info'
+                          ? 'border-emerald-600 font-medium text-emerald-400'
+                          : 'border-transparent text-slate-400 hover:text-emerald-400'
+                      }`}
+                    >
+                      Website Info
+                    </button>
+                    <button
+                      onClick={() => setActiveTab('ssl')}
+                      className={`py-3 border-b-2 transition ${
+                        activeTab === 'ssl'
+                          ? 'border-emerald-600 font-medium text-emerald-400'
+                          : 'border-transparent text-slate-400 hover:text-emerald-400'
+                      }`}
+                    >
+                      SSL Certificates
+                    </button>
+                    <button
+                      onClick={() => setActiveTab('email')}
+                      className={`py-3 border-b-2 transition ${
+                        activeTab === 'email'
+                          ? 'border-emerald-600 font-medium text-emerald-400'
+                          : 'border-transparent text-slate-400 hover:text-emerald-400'
+                      }`}
+                    >
+                      Identity (Email)
+                    </button>
+                    <button
+                      onClick={() => setActiveTab('ftp')}
+                      className={`py-3 border-b-2 transition ${
+                        activeTab === 'ftp'
+                          ? 'border-emerald-600 font-medium text-emerald-400'
+                          : 'border-transparent text-slate-400 hover:text-emerald-400'
+                      }`}
+                    >
+                      FTP Accounts
+                    </button>
+                    <button
+                      onClick={() => {
+                        setShowDnsLookupForm(true);
+                        setActiveTab('dns');
+                        setSelectedDomain(null);
+                        setDnsLookupDomain(null);
+                      }}
+                      className={`py-3 border-b-2 transition ${
+                        activeTab === 'dns'
+                          ? 'border-emerald-600 font-medium text-emerald-400'
+                          : 'border-transparent text-slate-400 hover:text-emerald-400'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <Globe className="h-4 w-4" />
+                        DNS Lookup
+                      </div>
+                    </button>
+                  </nav>
+                </div>
+              )}
 
               {/* Tab Content */}
               <section className="p-6 overflow-y-auto flex-1">
-              {activeTab === 'info' && (
+              {showDnsLookupForm && activeTab === 'dns' && selectedInstanceId && (
+                <DNSLookupPanel 
+                  key={`dns-lookup-${dnsLookupDomain || 'new'}`}
+                  instanceId={selectedInstanceId}
+                  initialHostname={dnsLookupDomain || undefined}
+                  triggerLookup={dnsLookupDomain || undefined}
+                  showDetailsByDefault={false}
+                  hideSearchForm={true}
+                />
+              )}
+              {!showDnsLookupForm && activeTab === 'info' && currentDomain && (
                 <div className="space-y-6">
                   <div>
                     <div className="flex items-center justify-between mb-4">
@@ -1473,7 +1629,7 @@ export default function DomainsPage() {
                 </div>
               )}
 
-              {activeTab === 'ssl' && (
+              {!showDnsLookupForm && activeTab === 'ssl' && currentDomain && (
                 <div className="space-y-6">
                   <div className="flex items-center justify-between">
                     <h3 className="text-lg font-semibold text-white">SSL Certificates</h3>
@@ -1598,7 +1754,7 @@ export default function DomainsPage() {
                 </div>
               )}
 
-              {activeTab === 'email' && (
+              {!showDnsLookupForm && activeTab === 'email' && (
                 <div>
                   <h3 className="text-lg font-semibold text-white mb-4">Email Identity</h3>
                   <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-6">
@@ -1653,12 +1809,13 @@ export default function DomainsPage() {
                 </div>
               )}
 
-              {activeTab === 'ftp' && currentDomain && (
+              {!showDnsLookupForm && activeTab === 'ftp' && currentDomain && (
                 <FtpAccountsPanel
                   domain={currentDomain.domain}
                   instanceId={getSelectedInstanceId() || ''}
                 />
               )}
+
               </section>
             </>
           ) : (

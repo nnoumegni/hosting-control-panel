@@ -106,6 +106,19 @@ export function filterValidDomains<T extends string | { domain: string }>(
 }
 
 /**
+ * Checks if a domain is a top-level domain (not a subdomain)
+ * A top-level domain has exactly 2 labels (domain + TLD)
+ * Examples: example.com (valid), www.example.com (subdomain), api.example.com (subdomain)
+ */
+export function isTopLevelDomain(domain: string): boolean {
+  if (!isValidDomainName(domain)) {
+    return false;
+  }
+  const labels = domain.trim().toLowerCase().split('.');
+  return labels.length === 2;
+}
+
+/**
  * Validates if a string could be a valid subdomain
  * (Same rules as domain, but allows single-label for subdomains)
  */
