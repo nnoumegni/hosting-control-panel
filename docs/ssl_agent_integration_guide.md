@@ -1,20 +1,6 @@
-tets# SSL Certificate Management - Complete Integration Guide
+# JetCamer Agent - Web Team Integration Guide
 
-**For Web Team Integration**  
-**Last Updated:** December 2, 2025  
-**Status:** Production Ready  
-
----
-
-## Table of Contents
-
-1. [Quick Start (5 minutes)](#quick-start)
-2. [API Reference](#api-reference)
-3. [Webhook DNS Setup (For Auto-Renewal)](#webhook-dns-setup)
-4. [Auto-Renewal Implementation](#auto-renewal-implementation)
-5. [Error Handling](#error-handling)
-6. [Testing](#testing)
-7. [Production Deployment](#production-deployment)
+**Complete guide for integrating with the JetCamer agent's SSL and DNS APIs**
 
 ---
 
@@ -27,57 +13,354 @@ const AGENT_URL = 'http://{AGENT_IP}:9811';
 // Replace {AGENT_IP} with your agent server IP
 ```
 
-### One-Time Setup: Configure ACME Account
+### One-Time Setup
 
 ```javascript
-// Do this ONCE per agent installation
+// 1. Configure ACME account (one-time per agent)
 await axios.post(`${AGENT_URL}/agent/ssl/acme-account`, {
-  email: 'admin@yourdomain.com',
+  email: 'services@jetcamer.com',
   useStaging: false  // true for testing, false for production
 });
 ```
 
-### Issue Your First Certificate (HTTP-01)
+---
+
+## SSL Certificate Management
+
+### Issue Standard Certificate (HTTP-01)
 
 ```javascript
-const axios = require('axios');
-
-// Issue certificate
 const response = await axios.post(`${AGENT_URL}/agent/ssl/issue`, {
   domain: 'example.com'
 });
 
-console.log(response.data);
-// {
-//   "domain": "example.com",
-//   "issuedAt": "2025-12-02T09:32:59Z",
-//   "expiresAt": "2026-03-02T09:32:58Z",
-//   "issuer": "R13",
-//   "status": "active"
-// }
+// Result: Certificate for example.com + www.example.com
+// Auto-renewal: ✅ Enabled automatically
 ```
 
-**Result:** Certificate for `example.com` + `www.example.com` (automatic)  
-**Location:** `/etc/letsencrypt/live/example.com/`  
-**Auto-Renewal:** ✅ YES (handled by agent automatically - no backend code needed!)
+### Issue Wildcard Certificate (DNS-01 with Webhook)
+
+```javascript
+const response = await axios.post(`${AGENT_URL}/agent/ssl/issue`, {
+  domain: 'example.com',
+  altNames: ['*.example.com'],
+  challengeType: 'dns',
+  dnsProvider: {
+    provider: 'webhook',
+    credentials: {
+      WEBHOOK_PRESENT_URL: 'https://api.yourservice.com/acme/dns/present',
+      WEBHOOK_CLEANUP_URL: 'https://api.yourservice.com/acme/dns/cleanup',
+      WEBHOOK_AUTH_HEADER: 'Bearer your-secret-token'
+    }
+  }
+});
+
+// Result: Certificate for example.com + *.example.com (all subdomains)
+// Auto-renewal: ✅ Enabled automatically with stored webhook config
+```
+
+### Check Certificate Health
+
+```javascript
+const health = await axios.get(`${AGENT_URL}/agent/ssl/health`);
+
+// Find certificates expiring soon
+const expiring = health.data.items.filter(cert => cert.daysToExpiry < 30);
+console.log(`${expiring.length} certificates need renewal`);
+```
+
+### Download Certificate
+
+```javascript
+const cert = await axios.get(`${AGENT_URL}/agent/ssl/download`, {
+  params: {
+    domain: 'example.com',
+    format: 'json'  // or 'pem', 'zip'
+  }
+});
+
+// cert.data contains: certificate, privateKey, fullchain, expiresAt, etc.
+```
 
 ---
 
-## API Reference
+## DNS Lookup API
 
-### Base URL
+### Basic DNS Resolution
 
+```javascript
+// A records (IPv4) - Default
+const response = await axios.get(`${AGENT_URL}/agent/dns/lookup`, {
+  params: { hostname: 'example.com' }
+});
+
+console.log('IPs:', response.data.records.map(r => r.value));
+// Output: ["93.184.216.34"]
 ```
-http://{AGENT_IP}:9811/agent/ssl
+
+### All Record Types
+
+```javascript
+// TXT records (ACME challenges, SPF, DKIM)
+const txt = await axios.get(`${AGENT_URL}/agent/dns/lookup`, {
+  params: { hostname: 'example.com', type: 'TXT' }
+});
+
+// MX records (mail servers)
+const mx = await axios.get(`${AGENT_URL}/agent/dns/lookup`, {
+  params: { hostname: 'example.com', type: 'MX' }
+});
+
+// NS records (nameservers)
+const ns = await axios.get(`${AGENT_URL}/agent/dns/lookup`, {
+  params: { hostname: 'example.com', type: 'NS' }
+});
+
+// CNAME records (aliases)
+const cname = await axios.get(`${AGENT_URL}/agent/dns/lookup`, {
+  params: { hostname: 'www.example.com', type: 'CNAME' }
+});
 ```
 
-Replace `{AGENT_IP}` with your agent server IP.
+### Supported Record Types
 
-### Endpoints
+| Type | Description | Use Case |
+|------|-------------|----------|
+| `A` | IPv4 addresses | Standard domain resolution |
+| `AAAA` | IPv6 addresses | IPv6 connectivity |
+| `TXT` | Text records | ACME challenges, SPF, DKIM |
+| `MX` | Mail servers | Email configuration |
+| `NS` | Nameservers | Delegation verification |
+| `CNAME` | Aliases | Subdomain configuration |
+| `SOA`, `SRV`, `PTR`, `ANY` | Other types | Advanced DNS queries |
+
+---
+
+## Common Integration Patterns
+
+### Pattern 1: Pre-Flight DNS Check Before SSL
+
+```javascript
+async function issueCertificateWithValidation(domain) {
+  // Step 1: Verify DNS is configured
+  const dnsCheck = await axios.get(`${AGENT_URL}/agent/dns/lookup`, {
+    params: { hostname: domain, type: 'A' }
+  });
+  
+  if (dnsCheck.data.count === 0) {
+    throw new Error(`DNS not configured for ${domain}. Please add A record first.`);
+  }
+  
+  const ips = dnsCheck.data.records.map(r => r.value);
+  console.log(`✓ ${domain} resolves to: ${ips.join(', ')}`);
+  
+  // Step 2: Issue certificate
+  const cert = await axios.post(`${AGENT_URL}/agent/ssl/issue`, {
+    domain
+  });
+  
+  console.log(`✓ Certificate issued for ${domain}`);
+  return cert.data;
+}
+
+// Usage
+await issueCertificateWithValidation('app.example.com');
+```
+
+### Pattern 2: Verify Webhook DNS-01 Challenge
+
+```javascript
+async function verifyACMEChallenge(domain, expectedValue) {
+  const challengeHost = `_acme-challenge.${domain}`;
+  
+  // Poll DNS until TXT record appears (webhook may take time)
+  for (let i = 0; i < 10; i++) {
+    const txt = await axios.get(`${AGENT_URL}/agent/dns/lookup`, {
+      params: { hostname: challengeHost, type: 'TXT' }
+    });
+    
+    const found = txt.data.records.some(r => r.value === expectedValue);
+    if (found) {
+      console.log(`✓ ACME challenge TXT record verified`);
+      return true;
+    }
+    
+    // Wait 5 seconds before retry
+    await new Promise(resolve => setTimeout(resolve, 5000));
+  }
+  
+  throw new Error('ACME challenge TXT record not found after 50 seconds');
+}
+
+// Usage (after calling webhook present endpoint)
+await webhookPresent({
+  recordName: '_acme-challenge.example.com',
+  value: 'xyz123abc456'
+});
+
+await verifyACMEChallenge('example.com', 'xyz123abc456');
+```
+
+### Pattern 3: Complete Domain Setup with SSL
+
+```javascript
+async function setupDomainWithSSL(domain, options = {}) {
+  const { includeWildcard = false, webhookConfig } = options;
+  
+  // Step 1: Verify DNS
+  const dnsCheck = await axios.get(`${AGENT_URL}/agent/dns/lookup`, {
+    params: { hostname: domain, type: 'A' }
+  });
+  
+  if (dnsCheck.data.count === 0) {
+    throw new Error(`DNS A record not found for ${domain}`);
+  }
+  
+  // Step 2: Issue certificate
+  let certRequest = { domain };
+  
+  if (includeWildcard && webhookConfig) {
+    certRequest = {
+      domain,
+      altNames: [`*.${domain}`],
+      challengeType: 'dns',
+      dnsProvider: {
+        provider: 'webhook',
+        credentials: webhookConfig
+      }
+    };
+  }
+  
+  const cert = await axios.post(`${AGENT_URL}/agent/ssl/issue`, certRequest);
+  
+  // Step 3: Verify certificate is active
+  const health = await axios.get(`${AGENT_URL}/agent/ssl/health`, {
+    params: { domain }
+  });
+  
+  const certInfo = health.data.items.find(c => c.domain === domain);
+  
+  return {
+    success: true,
+    domain,
+    certificate: cert.data,
+    health: certInfo,
+    autoRenewEnabled: certInfo.autoRenewEnabled
+  };
+}
+
+// Usage
+await setupDomainWithSSL('example.com', {
+  includeWildcard: true,
+  webhookConfig: {
+    WEBHOOK_PRESENT_URL: 'https://api.example.com/acme/dns/present',
+    WEBHOOK_AUTH_HEADER: 'Bearer secret'
+  }
+});
+```
+
+### Pattern 4: Domain Health Monitoring
+
+```javascript
+async function monitorDomainHealth(domains) {
+  const results = [];
+  
+  for (const domain of domains) {
+    // Check DNS
+    const dns = await axios.get(`${AGENT_URL}/agent/dns/lookup`, {
+      params: { hostname: domain, type: 'A' }
+    }).catch(() => ({ data: { count: 0 } }));
+    
+    // Check SSL
+    const ssl = await axios.get(`${AGENT_URL}/agent/ssl/health`, {
+      params: { domain }
+    }).catch(() => ({ data: { items: [] } }));
+    
+    const cert = ssl.data.items.find(c => c.domain === domain);
+    
+    results.push({
+      domain,
+      dns: {
+        configured: dns.data.count > 0,
+        ips: dns.data.records.map(r => r.value)
+      },
+      ssl: {
+        active: cert?.status === 'active',
+        expiresIn: cert?.daysToExpiry,
+        autoRenew: cert?.autoRenewEnabled
+      }
+    });
+  }
+  
+  return results;
+}
+
+// Usage
+const domains = ['example.com', 'app.example.com', 'www.example.com'];
+const health = await monitorDomainHealth(domains);
+
+health.forEach(h => {
+  console.log(`${h.domain}:`);
+  console.log(`  DNS: ${h.dns.configured ? '✓' : '✗'}`);
+  console.log(`  SSL: ${h.ssl.active ? '✓' : '✗'} (expires in ${h.ssl.expiresIn} days)`);
+});
+```
+
+### Pattern 5: Batch Domain Validation
+
+```javascript
+async function validateDomains(domains) {
+  const results = [];
+  
+  for (const domain of domains) {
+    try {
+      // Check A record
+      const a = await axios.get(`${AGENT_URL}/agent/dns/lookup`, {
+        params: { hostname: domain, type: 'A' }
+      });
+      
+      // Check nameservers
+      const ns = await axios.get(`${AGENT_URL}/agent/dns/lookup`, {
+        params: { hostname: domain, type: 'NS' }
+      });
+      
+      // Check SSL status
+      const ssl = await axios.get(`${AGENT_URL}/agent/ssl/health`, {
+        params: { domain }
+      });
+      
+      results.push({
+        domain,
+        status: 'ok',
+        dns: {
+          a_records: a.data.records.map(r => r.value),
+          nameservers: ns.data.records.map(r => r.value)
+        },
+        ssl: ssl.data.items.find(c => c.domain === domain)
+      });
+    } catch (error) {
+      results.push({
+        domain,
+        status: 'error',
+        error: error.response?.data?.error || error.message
+      });
+    }
+  }
+  
+  return results;
+}
+```
+
+---
+
+## API Endpoints Summary
+
+### SSL Endpoints
 
 | Endpoint | Method | Purpose |
 |----------|--------|---------|
-| `/agent/ssl/issue` | POST | Issue new certificate |
+| `/agent/ssl/acme-account` | POST | Configure ACME account (one-time) |
+| `/agent/ssl/issue` | POST | Issue certificate |
 | `/agent/ssl/renew` | POST | Renew certificate (manual) |
 | `/agent/ssl` | GET | List certificates |
 | `/agent/ssl/health` | GET | Certificate health/expiry |
@@ -86,413 +369,277 @@ Replace `{AGENT_IP}` with your agent server IP.
 | `/agent/ssl/auto-renewal/status` | GET | Auto-renewal status |
 | `/agent/ssl/auto-renewal/trigger` | POST | Trigger renewal check |
 
+### DNS Endpoints
+
+| Endpoint | Method | Purpose |
+|----------|--------|---------|
+| `/agent/dns/lookup` | GET | DNS lookup (all record types) |
+
 ---
 
-### 1. Issue Certificate
+## Response Formats
 
-**Endpoint:** `POST /agent/ssl/issue`
+### SSL Certificate Response
 
-#### Option A: HTTP-01 (Standard - Recommended)
-
-**Request:**
-```json
-{
-  "domain": "example.com"
-}
-```
-
-**Response:**
 ```json
 {
   "domain": "example.com",
-  "issuedAt": "2025-12-02T09:32:59Z",
-  "expiresAt": "2026-03-02T09:32:58Z",
+  "issuedAt": "2025-12-02T19:17:53Z",
+  "expiresAt": "2026-03-02T19:17:52Z",
   "issuer": "R13",
   "status": "active",
   "webServer": "apache",
   "managedBy": "jetcamer",
-  "acmeEnvironment": "production",
-  "acmeAccountEmail": "user_acme_email"
+  "autoRenewEnabled": true,
+  "challengeType": "http",
+  "sans": ["www.example.com"]
 }
 ```
 
-**What you get:**
-- Certificate for `example.com` AND `www.example.com`
-- Auto-renewal: ✅ YES (automatic - agent handles it!)
-- Wildcard: ❌ NO
+### DNS Lookup Response
 
-#### Option B: DNS-01 with Webhook (For Wildcards)
-
-**Request:**
 ```json
 {
-  "domain": "example.com",
-  "altNames": ["*.example.com"],
-  "challengeType": "dns",
-  "dnsProvider": {
-    "provider": "webhook",
-    "credentials": {
-      "WEBHOOK_PRESENT_URL": "https://api.yourservice.com/acme/dns/present",
-      "WEBHOOK_CLEANUP_URL": "https://api.yourservice.com/acme/dns/cleanup",
-      "WEBHOOK_AUTH_HEADER": "Bearer your-secret-token",
-      "WEBHOOK_WAIT_SECONDS": "60"
-    }
-  }
-}
-```
-
-**Response:** Same format as HTTP-01
-
-**What you get:**
-- Certificate for `example.com` AND `*.example.com` (all subdomains!)
-- Auto-renewal: ✅ YES (automatic - agent handles it with stored webhook config!)
-- Wildcard: ✅ YES
-
----
-
-### 2. Renew Certificate
-
-**Endpoint:** `POST /agent/ssl/renew`
-
-**Request (HTTP-01):**
-```json
-{
-  "domain": "example.com"
-}
-```
-
-**Request (DNS-01):**
-```json
-{
-  "domain": "example.com",
-  "challengeType": "dns",
-  "dnsProvider": {
-    "provider": "webhook",
-    "credentials": {
-      "WEBHOOK_PRESENT_URL": "https://api.yourservice.com/acme/dns/present",
-      "WEBHOOK_AUTH_HEADER": "Bearer your-secret-token" (optional)
-    }
-  }
-}
-```
-
-**Note:** Use the same challenge type and credentials as the original issuance.
-
----
-
-### 3. List Certificates
-
-**Endpoint:** `GET /agent/ssl`
-
-**Response:**
-```json
-[
-  {
-    "domain": "example.com",
-    "issuedAt": "2025-12-02T09:32:59Z",
-    "expiresAt": "2026-03-02T09:32:58Z",
-    "issuer": "R13",
-    "status": "active",
-    "webServer": "apache",
-    "managedBy": "jetcamer"
-  }
-]
-```
-
-**Filter by domain:**
-```
-GET /agent/ssl?domain=example
-```
-
-Returns all certificates with "example" in the domain name.
-
----
-
-### 4. Check Certificate Health
-
-**Endpoint:** `GET /agent/ssl/health`
-
-**Response:**
-```json
-{
-  "timestamp": "2025-12-02T14:30:00Z",
-  "items": [
+  "hostname": "example.com",
+  "recordType": "A",
+  "records": [
     {
-      "domain": "example.com",
-      "issuedAt": "2025-12-02T09:32:59Z",
-      "expiresAt": "2026-03-02T09:32:58Z",
-      "issuer": "R13",
-      "status": "active",
-      "daysToExpiry": 89
+      "type": "A",
+      "value": "93.184.216.34"
     }
-  ]
+  ],
+  "count": 1
 }
 ```
 
-**Use case:** Find certificates needing renewal
-```javascript
-const expiring = response.items.filter(cert => cert.daysToExpiry < 30);
-```
-
----
-
-### 5. Download Certificate
-
-**Endpoint:** `GET /agent/ssl/download?domain={domain}&format={format}`
-
-**Parameters:**
-- `domain` (required): Domain name
-- `format` (optional): `json`, `pem`, or `zip` (default: `json`)
-
-**Example:**
-```
-GET /agent/ssl/download?domain=example.com&format=json
-```
-
-**Response (JSON format):**
-```json
-{
-  "domain": "example.com",
-  "certificate": "-----BEGIN CERTIFICATE-----\n...",
-  "privateKey": "-----BEGIN PRIVATE KEY-----\n...",
-  "fullchain": "-----BEGIN CERTIFICATE-----\n...",
-  "issuedAt": "2025-12-02T09:32:59Z",
-  "expiresAt": "2026-03-02T09:32:58Z",
-  "issuer": "R13"
-}
-```
-
----
-
-## Webhook DNS Setup (To be implemented at the user-specified enpoints)
-There should be a question mark that would open a popup modal explaining to the user how each of the endpoints should be implemented
-
-### Why Use Webhook DNS?
-
-✅ **Wildcard certificates** (`*.example.com`)  
-✅ **Auto-renewal** (same as Route53/Cloudflare)  
-✅ **Works with ANY DNS provider** (WHM, GoDaddy, etc.)  
-✅ **Uses your existing DNS code**  
-
-### What You Need to Implement
-
-**Two webhook endpoints** that handle DNS TXT record operations:
-
-#### 1. Present Endpoint (Create TXT Record)
-
-```javascript
-// In backend/server.js or routes file
-
-app.post('/acme/dns/present', async (req, res) => {
-  // 1. Authenticate
-  const authHeader = req.headers.authorization;
-  if (authHeader !== `Bearer ${process.env.ACME_WEBHOOK_SECRET}`) {
-    return res.status(401).json({ success: false, error: 'Unauthorized' });
-  }
-  
-  // 2. Extract payload
-  const { recordName, recordValue, zone } = req.body;
-  
-  // 3. Parse subdomain from recordName
-  // "_acme-challenge.app.example.com." → "_acme-challenge.app"
-  const name = recordName
-    .replace(`.${zone}.`, '')
-    .replace(`.${zone}`, '')
-    .replace(/\.$/, '');
-  
-  // 4. Create TXT record in your DNS provider
-  try {
-    // Use your existing DNS function
-    await yourDNS.createTXTRecord({
-      zone: zone,           // e.g., "example.com"
-      name: name,           // e.g., "_acme-challenge.app"
-      value: recordValue,   // e.g., "xYz123AbC456..."
-      ttl: 300
-    });
-    
-    res.json({ success: true, message: 'TXT record created' });
-  } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
-```
-
-#### 2. Cleanup Endpoint (Delete TXT Record)
-
-```javascript
-app.post('/acme/dns/cleanup', async (req, res) => {
-  // Authenticate
-  const authHeader = req.headers.authorization;
-  if (authHeader !== `Bearer ${process.env.ACME_WEBHOOK_SECRET}`) {
-    return res.status(401).json({ success: false, error: 'Unauthorized' });
-  }
-  
-  const { recordName, zone } = req.body;
-  const name = recordName.replace(`.${zone}.`, '').replace(`.${zone}`, '').replace(/\.$/, '');
-  
-  try {
-    await yourDNS.deleteTXTRecord({ zone, name });
-    res.json({ success: true, message: 'TXT record deleted' });
-  } catch (error) {
-    // Don't fail cleanup - record might not exist
-    res.json({ success: true, message: 'Cleanup complete' });
-  }
-});
-```
-
-### Webhook Payload Format
-
-**Your endpoints will receive:**
+### DNS Lookup Response (MX with Priority)
 
 ```json
 {
-  "domain": "app.example.com",
-  "recordName": "_acme-challenge.app.example.com.",
-  "recordValue": "xYz123AbC456DeF789GhI012JkL345MnO678PqR901StU234VwX567",
-  "fqdn": "_acme-challenge.app.example.com.",
-  "zone": "example.com"
-}
-```
-
-**Your endpoints must return:**
-
-```json
-{
-  "success": true,
-  "message": "Operation completed"
-}
-```
-
----
-
-## Auto-Renewal Implementation
-
-### ✨ **GOOD NEWS: The Agent Handles Auto-Renewal Automatically!**
-
-The Go agent **automatically renews certificates** without any backend code needed! When you issue a certificate (HTTP-01, DNS-01 with Route53, Cloudflare, or Webhook), the agent:
-
-1. **Stores the renewal configuration** (challenge type, DNS provider credentials)
-2. **Checks daily** for certificates expiring within 30 days
-3. **Automatically renews** them using the stored configuration
-4. **Retries** up to 3 times if renewal fails
-
-**You don't need to implement any renewal logic in your backend!**
-
-### Auto-Renewal Configuration (Built-in)
-
-The agent is pre-configured with optimal settings:
-- **Check Interval:** Every 24 hours
-- **Renewal Threshold:** 30 days before expiry
-- **Max Retries:** 3 attempts with exponential backoff
-- **Supported:** HTTP-01, DNS-01 (Route53, Cloudflare, Webhook)
-
-### Check Auto-Renewal Status (Optional)
-
-If you want to monitor the auto-renewal system:
-
-```javascript
-// Check auto-renewal status
-const status = await axios.get(`${AGENT_URL}/agent/ssl/auto-renewal/status`);
-console.log(status.data);
-// {
-//   "enabled": true,
-//   "running": true,
-//   "checkInterval": "24h0m0s",
-//   "renewalThreshold": 30,
-//   "maxRetries": 3
-// }
-```
-
-### Manually Trigger Renewal Check (Optional)
-
-You can manually trigger a renewal check anytime:
-
-```javascript
-// Manually trigger renewal check (runs in background)
-await axios.post(`${AGENT_URL}/agent/ssl/auto-renewal/trigger`);
-// {
-//   "status": "triggered",
-//   "message": "Auto-renewal check started in background"
-// }
-```
-
-### Legacy Manual Renewal (Still Supported)
-
-If you prefer manual control, you can still call the renewal endpoint directly:
-
-```javascript
-// Manual renewal for HTTP-01 certificate
-await axios.post(`${AGENT_URL}/agent/ssl/renew`, {
-  domain: 'example.com'
-});
-
-// Manual renewal for DNS-01 certificate (must provide same config as issuance)
-await axios.post(`${AGENT_URL}/agent/ssl/renew`, {
-  domain: 'example.com',
-  challengeType: 'dns',
-  dnsProvider: {
-    provider: 'webhook',
-    credentials: {
-      WEBHOOK_PRESENT_URL: 'https://api.yourservice.com/acme/dns/present',
-      WEBHOOK_AUTH_HEADER: 'Bearer your-token'
+  "hostname": "example.com",
+  "recordType": "MX",
+  "records": [
+    {
+      "type": "MX",
+      "value": "mail.example.com.",
+      "priority": 10
+    },
+    {
+      "type": "MX",
+      "value": "mail2.example.com.",
+      "priority": 20
     }
-  }
-});
+  ],
+  "count": 2
+}
 ```
 
 ---
 
 ## Error Handling
 
-### Common Errors
+### User-Friendly Error Format
 
-**400 Bad Request:**
+All SSL errors return structured, actionable messages:
+
 ```json
-{"error": "domain is required"}
+{
+  "success": false,
+  "error": "DNS_NOT_CONFIGURED",
+  "message": "DNS is not configured for www.example.com",
+  "action": "Please add an A record for www.example.com pointing to your server's IP address, then try again.",
+  "details": "The domain does not exist in DNS or the A record is missing.",
+  "rawError": "[www.example.com] acme: error: 400 :: DNS problem: NXDOMAIN"
+}
 ```
-Fix: Provide required fields
 
-**404 Not Found:**
-```json
-{"error": "certificate not found for domain example.com"}
-```
-Fix: Certificate doesn't exist, issue it first
+**Response Fields:**
+- `success` - Always `false` for errors
+- `error` - Error code (e.g., `DNS_NOT_CONFIGURED`)
+- `message` - **Display this to users**
+- `action` - **Tell users what to do**
+- `details` - Technical information for debugging
+- `rawError` - Original error (optional, for logs)
 
-**500 Internal Server Error:**
-```text
-error: one or more domains had a problem:
-[example.com] acme: error presenting token: ...
-```
-Fix: Check agent logs, verify DNS/port 80 access
+### Common Error Codes
+
+| Error Code | User Message | Action |
+|------------|--------------|--------|
+| `DNS_NOT_CONFIGURED` | DNS is not configured for {domain} | Add A record pointing to server IP |
+| `DNS_PROPAGATION_PENDING` | DNS records have not propagated yet | Wait 5-10 minutes for DNS propagation |
+| `PORT_80_BLOCKED` | Port 80 is not accessible or blocked | Open port 80 or use DNS-01 challenge |
+| `WEBHOOK_FAILED` | DNS webhook endpoint failed | Check webhook accessibility and auth token |
+| `RATE_LIMIT_EXCEEDED` | Let's Encrypt rate limit exceeded | Wait 1 hour or use staging |
+| `ACME_NOT_CONFIGURED` | SSL service is not configured | Contact administrator |
+| `CERTIFICATE_NOT_FOUND` | No certificate found for domain | Issue new certificate instead |
+| `INVALID_DOMAIN` | Invalid domain name format | Use valid domain format |
+
+**See full list:** [SSL_ERROR_HANDLING_GUIDE.md](SSL_ERROR_HANDLING_GUIDE.md)
 
 ### Error Handling Pattern
 
 ```javascript
-async function issueCertificateSafely(domain, config) {
+async function safeIssueCertificate(domain) {
   try {
-    const response = await axios.post(`${AGENT_URL}/agent/ssl/issue`, config);
-    return { success: true, data: response.data };
+    // Pre-flight DNS check
+    const dns = await axios.get(`${AGENT_URL}/agent/dns/lookup`, {
+      params: { hostname: domain, type: 'A' }
+    });
+    
+    if (dns.data.count === 0) {
+      return {
+        success: false,
+        error: 'DNS_NOT_CONFIGURED',
+        message: `DNS A record not found for ${domain}`
+      };
+    }
+    
+    // Issue certificate
+    const cert = await axios.post(`${AGENT_URL}/agent/ssl/issue`, {
+      domain
+    });
+    
+    return {
+      success: true,
+      data: cert.data
+    };
+    
   } catch (error) {
     const errorMsg = error.response?.data || error.message;
     
-    console.error(`[SSL] Failed for ${domain}:`, errorMsg);
-    
     // Handle specific errors
-    if (errorMsg.includes('bind: address already in use')) {
-      return { success: false, error: 'Port 80 conflict - use DNS challenge' };
-    }
-    
-    if (errorMsg.includes('403') || errorMsg.includes('401')) {
-      return { success: false, error: 'Authentication failed' };
+    if (errorMsg.includes('ACME account not configured')) {
+      return {
+        success: false,
+        error: 'ACME_NOT_CONFIGURED',
+        message: 'Please configure ACME account first'
+      };
     }
     
     if (errorMsg.includes('rate limit')) {
-      return { success: false, error: 'Rate limit exceeded - try staging or wait' };
+      return {
+        success: false,
+        error: 'RATE_LIMIT',
+        message: 'Let\'s Encrypt rate limit exceeded. Try staging or wait.'
+      };
     }
     
-    return { success: false, error: errorMsg };
+    return {
+      success: false,
+      error: 'UNKNOWN',
+      message: errorMsg
+    };
   }
 }
+```
+
+---
+
+## Complete Example: SSL Manager Class
+
+```javascript
+const axios = require('axios');
+
+class JetCamerAgentClient {
+  constructor(agentIP) {
+    this.agentUrl = `http://${agentIP}:9811`;
+  }
+  
+  // DNS Lookup
+  async lookupDNS(hostname, type = 'A') {
+    const response = await axios.get(`${this.agentUrl}/agent/dns/lookup`, {
+      params: { hostname, type }
+    });
+    return response.data;
+  }
+  
+  // Verify domain resolves
+  async verifyDNS(hostname) {
+    const dns = await this.lookupDNS(hostname, 'A');
+    return dns.count > 0;
+  }
+  
+  // Issue standard certificate
+  async issueCertificate(domain) {
+    // Pre-flight check
+    if (!(await this.verifyDNS(domain))) {
+      throw new Error(`DNS not configured for ${domain}`);
+    }
+    
+    const response = await axios.post(`${this.agentUrl}/agent/ssl/issue`, {
+      domain
+    });
+    
+    return response.data;
+  }
+  
+  // Issue wildcard certificate
+  async issueWildcardCertificate(domain, webhookConfig) {
+    const response = await axios.post(`${this.agentUrl}/agent/ssl/issue`, {
+      domain,
+      altNames: [`*.${domain}`],
+      challengeType: 'dns',
+      dnsProvider: {
+        provider: 'webhook',
+        credentials: webhookConfig
+      }
+    });
+    
+    return response.data;
+  }
+  
+  // Get certificate health
+  async getCertificateHealth(domain) {
+    const response = await axios.get(`${this.agentUrl}/agent/ssl/health`, {
+      params: { domain }
+    });
+    
+    return response.data.items.find(c => c.domain === domain);
+  }
+  
+  // Download certificate
+  async downloadCertificate(domain, format = 'json') {
+    const response = await axios.get(`${this.agentUrl}/agent/ssl/download`, {
+      params: { domain, format }
+    });
+    
+    return response.data;
+  }
+  
+  // Verify ACME challenge TXT record
+  async verifyACMEChallenge(domain, expectedValue) {
+    const challengeHost = `_acme-challenge.${domain}`;
+    
+    for (let i = 0; i < 10; i++) {
+      const txt = await this.lookupDNS(challengeHost, 'TXT');
+      const found = txt.records.some(r => r.value === expectedValue);
+      
+      if (found) {
+        return true;
+      }
+      
+      await new Promise(resolve => setTimeout(resolve, 5000));
+    }
+    
+    return false;
+  }
+}
+
+// Usage
+const agent = new JetCamerAgentClient('54.214.70.207');
+
+// Issue certificate
+await agent.issueCertificate('example.com');
+
+// Issue wildcard
+await agent.issueWildcardCertificate('example.com', {
+  WEBHOOK_PRESENT_URL: 'https://api.example.com/acme/dns/present',
+  WEBHOOK_AUTH_HEADER: 'Bearer secret'
+});
+
+// Check health
+const health = await agent.getCertificateHealth('example.com');
+console.log(`Expires in ${health.daysToExpiry} days`);
 ```
 
 ---
@@ -506,392 +653,182 @@ curl http://{AGENT_IP}:9811/health
 # Expected: "ok"
 ```
 
-### Test ACME Account
+### Test DNS Lookup
 
 ```bash
-curl http://{AGENT_IP}:9811/agent/ssl/acme-account
-# Expected: {"email":"...","configured":true}
+curl "http://{AGENT_IP}:9811/agent/dns/lookup?hostname=google.com&type=A"
 ```
 
-### Test Certificate Issuance
+### Test SSL Issuance
 
 ```bash
 curl -X POST http://{AGENT_IP}:9811/agent/ssl/issue \
   -H "Content-Type: application/json" \
-  -d '{"domain":"test.yourdomain.com"}'
-```
-
-### Test Webhook Endpoints (If Using DNS-01)
-
-```bash
-# Test present endpoint
-curl -X POST https://api.yourservice.com/acme/dns/present \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer your-secret" \
-  -d '{
-    "domain": "test.example.com",
-    "recordName": "_acme-challenge.test.example.com.",
-    "recordValue": "test-value-123",
-    "zone": "example.com"
-  }'
-
-# Expected: {"success": true}
-
-# Verify TXT record created
-dig +short TXT _acme-challenge.test.example.com
-# Expected: "test-value-123"
-
-# Test cleanup
-curl -X POST https://api.yourservice.com/acme/dns/cleanup \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer your-secret" \
-  -d '{
-    "domain": "test.example.com",
-    "recordName": "_acme-challenge.test.example.com.",
-    "zone": "example.com"
-  }'
-
-# Expected: {"success": true}
+  -d '{"domain":"test.example.com"}'
 ```
 
 ---
 
-## Production Deployment
+## Auto-Renewal
 
-### Environment Variables
+**Good News:** Auto-renewal is **automatic**! No code needed.
 
-```bash
-# Your backend
-export ACME_WEBHOOK_SECRET="randomly-generated-secret-here"
-export AGENT_IP="instance_ip"  # Your agent server IP
+- Certificates auto-renew 30 days before expiry
+- Works for HTTP-01, Route53, Cloudflare, and Webhook DNS
+- Agent handles everything in the background
 
-# Generate random secret
-export ACME_WEBHOOK_SECRET=$(openssl rand -hex 32)
-```
-
-### Integration Checklist
-
-#### Phase 1: Basic SSL (15 minutes)
-- [ ] Set `AGENT_IP` environment variable
-- [ ] Configure ACME account (one-time)
-- [ ] Test HTTP-01 certificate issuance
-- [ ] Integrate `issueCertificate()` function
-- [ ] Test in development
-
-#### Phase 2: Webhook DNS (30 minutes) - Optional
-- [ ] Add webhook endpoints to backend
-- [ ] Set `ACME_WEBHOOK_SECRET`
-- [ ] Test webhook endpoints manually
-- [ ] Test wildcard certificate issuance
-- [ ] Verify TXT record creation/deletion
-
-#### Phase 3: Auto-Renewal (Already Done! ✅)
-- [x] Auto-renewal is **built into the agent** - no code needed!
-- [x] Agent automatically renews certificates 30 days before expiry
-- [x] Works for HTTP-01, Route53, Cloudflare, and Webhook DNS
-- [ ] (Optional) Implement monitoring dashboard using `/agent/ssl/auto-renewal/status`
-- [ ] (Optional) Set up notifications for failed renewals by polling `/agent/ssl/health`
-
----
-
-## Complete Code Example
-
-### SSL Manager Class (Production-Ready)
+**Optional Monitoring:**
 
 ```javascript
-const axios = require('axios');
-const schedule = require('node-schedule');
+// Check auto-renewal status
+const status = await axios.get(`${AGENT_URL}/agent/ssl/auto-renewal/status`);
 
-class SSLManager {
-  constructor(agentIP, db) {
-    this.agentUrl = `http://${agentIP}:9811`;
-    this.db = db;
-    this.webhookSecret = process.env.ACME_WEBHOOK_SECRET;
-  }
-  
-  // Issue standard certificate (HTTP-01)
-  async issueStandard(domain) {
-    const response = await axios.post(`${this.agentUrl}/agent/ssl/issue`, {
-      domain
-    });
-    
-    // Save renewal config
-    await this.db.collection('ssl_renewal').updateOne(
-      { domain },
-      { $set: { domain, challengeType: 'http', lastIssued: new Date() } },
-      { upsert: true }
-    );
-    
-    return response.data;
-  }
-  
-  // Issue wildcard certificate (Webhook DNS)
-  async issueWildcard(domain) {
-    const webhookConfig = {
-      WEBHOOK_PRESENT_URL: 'https://api.yourservice.com/acme/dns/present',
-      WEBHOOK_CLEANUP_URL: 'https://api.yourservice.com/acme/dns/cleanup',
-      WEBHOOK_AUTH_HEADER: `Bearer ${this.webhookSecret}`
-    };
-    
-    const response = await axios.post(`${this.agentUrl}/agent/ssl/issue`, {
-      domain,
-      altNames: [`*.${domain}`],
-      challengeType: 'dns',
-      dnsProvider: {
-        provider: 'webhook',
-        credentials: webhookConfig
-      }
-    });
-    
-    // Save renewal config
-    await this.db.collection('ssl_renewal').updateOne(
-      { domain },
-      { 
-        $set: { 
-          domain, 
-          challengeType: 'dns',
-          dnsProvider: { provider: 'webhook', credentials: webhookConfig },
-          lastIssued: new Date(),
-          includesWildcard: true
-        } 
-      },
-      { upsert: true }
-    );
-    
-    return response.data;
-  }
-  
-  // List all certificates
-  async list() {
-    const response = await axios.get(`${this.agentUrl}/agent/ssl`);
-    return response.data;
-  }
-  
-  // Get health/expiry info
-  async getHealth() {
-    const response = await axios.get(`${this.agentUrl}/agent/ssl/health`);
-    return response.data;
-  }
-  
-  // Download certificate
-  async download(domain, format = 'json') {
-    const response = await axios.get(`${this.agentUrl}/agent/ssl/download`, {
-      params: { domain, format }
-    });
-    return response.data;
-  }
-  
-  // Renew certificate
-  async renew(domain) {
-    const config = await this.db.collection('ssl_renewal').findOne({ domain });
-    
-    if (!config) {
-      return axios.post(`${this.agentUrl}/agent/ssl/renew`, { domain });
-    }
-    
-    const renewRequest = config.challengeType === 'dns'
-      ? {
-          domain,
-          challengeType: 'dns',
-          dnsProvider: config.dnsProvider
-        }
-      : { domain };
-    
-    const response = await axios.post(`${this.agentUrl}/agent/ssl/renew`, renewRequest);
-    
-    // Update last renewed
-    await this.db.collection('ssl_renewal').updateOne(
-      { domain },
-      { $set: { lastRenewed: new Date() } }
-    );
-    
-    return response.data;
-  }
-  
-  // Auto-renew expiring certificates
-  async renewExpiring() {
-    const health = await this.getHealth();
-    const expiring = health.items.filter(cert => cert.daysToExpiry < 30);
-    
-    const results = [];
-    for (const cert of expiring) {
-      try {
-        const renewed = await this.renew(cert.domain);
-        results.push({ domain: cert.domain, success: true, data: renewed });
-      } catch (error) {
-        results.push({ domain: cert.domain, success: false, error: error.message });
-      }
-    }
-    
-    return results;
-  }
-  
-  // Start auto-renewal scheduler
-  startScheduler() {
-    // Check daily at 2 AM
-    schedule.scheduleJob('0 2 * * *', async () => {
-      console.log('[SSL] Running scheduled certificate renewal check...');
-      const results = await this.renewExpiring();
-      
-      const renewed = results.filter(r => r.success);
-      const failed = results.filter(r => !r.success);
-      
-      console.log(`[SSL] Renewal complete: ${renewed.length} success, ${failed.length} failed`);
-      
-      if (failed.length > 0) {
-        // Send alert
-        console.error('[SSL] Failed renewals:', failed);
-      }
-    });
-    
-    console.log('[SSL] Auto-renewal scheduler started (daily at 2 AM)');
-  }
-}
-
-// Usage
-const sslManager = new SSLManager(process.env.AGENT_IP, yourDatabase);
-
-// Start auto-renewal
-sslManager.startScheduler();
-
-// Issue standard certificate
-await sslManager.issueStandard('example.com');
-
-// Issue wildcard certificate
-await sslManager.issueWildcard('example.com');
-
-// Manual renewal
-await sslManager.renew('example.com');
-
-module.exports = SSLManager;
+// Manually trigger renewal check
+await axios.post(`${AGENT_URL}/agent/ssl/auto-renewal/trigger`);
 ```
+
+---
+
+## Best Practices
+
+1. **Always verify DNS before SSL issuance**
+   ```javascript
+   const dns = await agent.lookupDNS(domain);
+   if (dns.count === 0) {
+     // Fix DNS first
+   }
+   ```
+
+2. **Use DNS lookup for webhook verification**
+   ```javascript
+   // After webhook creates TXT record
+   await verifyACMEChallenge(domain, challengeValue);
+   ```
+
+3. **Monitor certificate health regularly**
+   ```javascript
+   const health = await agent.getCertificateHealth(domain);
+   if (health.daysToExpiry < 30) {
+     // Alert or manual renewal
+   }
+   ```
+
+4. **Handle errors gracefully**
+   ```javascript
+   try {
+     await agent.issueCertificate(domain);
+   } catch (error) {
+     // Check error type and handle appropriately
+   }
+   ```
 
 ---
 
 ## Quick Reference
 
-### HTTP-01 (Standard Certificates)
+### Common Tasks
 
 ```javascript
-// Issue
+// 1. Issue standard certificate
 POST /agent/ssl/issue
 { "domain": "example.com" }
 
-// Result: example.com + www.example.com
-// Auto-renewal: ✅ YES
-```
-
-### DNS-01 Webhook (Wildcard Certificates)
-
-```javascript
-// Issue
+// 2. Issue wildcard certificate
 POST /agent/ssl/issue
 {
   "domain": "example.com",
   "altNames": ["*.example.com"],
   "challengeType": "dns",
-  "dnsProvider": {
-    "provider": "webhook",
-    "credentials": {
-      "WEBHOOK_PRESENT_URL": "https://api.yourservice.com/acme/dns/present",
-      "WEBHOOK_AUTH_HEADER": "Bearer secret"
-    }
-  }
+  "dnsProvider": { "provider": "webhook", ... }
 }
 
-// Result: example.com + *.example.com
-// Auto-renewal: ✅ YES
-```
+// 3. Check DNS
+GET /agent/dns/lookup?hostname=example.com&type=A
 
-### List & Monitor
+// 4. Check certificate health
+GET /agent/ssl/health?domain=example.com
 
-```javascript
-// List all
-GET /agent/ssl
-
-// Check health
-GET /agent/ssl/health
-
-// Download
+// 5. Download certificate
 GET /agent/ssl/download?domain=example.com&format=json
 ```
 
-### Renewal
+---
+
+## Error Handling Best Practices
+
+### Frontend Error Display
 
 ```javascript
-// Renew (same payload as issuance)
-POST /agent/ssl/renew
-{same configuration as issue}
+async function issueCertificateWithUI(domain) {
+  try {
+    const response = await axios.post(`${AGENT_URL}/agent/ssl/issue`, {
+      domain
+    });
+    
+    // Show success
+    showNotification({
+      type: 'success',
+      message: 'Certificate issued successfully!'
+    });
+    
+    return response.data;
+  } catch (error) {
+    const errorData = error.response?.data;
+    
+    if (errorData && !errorData.success) {
+      // Show user-friendly error
+      showNotification({
+        type: 'error',
+        title: errorData.message,        // ← Display this
+        message: errorData.action,       // ← Tell user what to do
+      });
+      
+      // Log technical details for debugging
+      console.error('SSL Error:', {
+        code: errorData.error,
+        details: errorData.details,
+        raw: errorData.rawError
+      });
+    } else {
+      // Fallback for unexpected errors
+      showNotification({
+        type: 'error',
+        message: 'Failed to issue certificate. Please try again.'
+      });
+    }
+  }
+}
 ```
 
----
+### Error Codes Reference
 
-## FAQ
+| Code | What It Means | Show User |
+|------|---------------|-----------|
+| `DNS_NOT_CONFIGURED` | Domain not in DNS | "Configure DNS first" |
+| `PORT_80_BLOCKED` | Port 80 not accessible | "Use DNS-01 challenge" |
+| `WEBHOOK_FAILED` | Webhook error | "Check webhook settings" |
+| `RATE_LIMIT_EXCEEDED` | Too many certificates | "Wait 1 hour or use staging" |
 
-**Q: What is `{AGENT_IP}`?**  
-A: Your agent server IP address. Replace with actual instance IP
-
-**Q: Can certificates auto-renew?**  
-A: Yes! The agent automatically handles renewal for HTTP-01, Route53, Cloudflare, and Webhook. No backend code required!
-
-**Q: Do I need to implement webhooks?**  
-A: Only if you want wildcard certificates. For standard certs, HTTP-01 works without webhooks.
-
-**Q: How do wildcard certificates work?**  
-A: Use DNS-01 challenge (webhook provider). One certificate covers `example.com` and `*.example.com` (all subdomains).
-
-**Q: Where are certificates stored?**  
-A: `/etc/letsencrypt/live/{domain}/` - Standard location, survives agent uninstalls.
-
-**Q: What if renewal fails?**  
-A: Check agent logs: `journalctl -u jetcamer-agent -f`. Certificate is still valid for 60 days after renewal starts.
-
-**Q: Can I use different challenge methods for different domains?**  
-A: Yes! Use HTTP-01 for some, DNS-01 for others. Store the method in your database.
-
-**Q: What's the difference between providers?**  
-A: 
-- **HTTP-01**: No wildcards, auto-renews (agent handles it)
-- **Webhook DNS**: Wildcards, auto-renews (agent handles it), works with ANY DNS
-- **Route53/Cloudflare**: Wildcards, auto-renews (agent handles it), specific DNS providers
-- **Manual**: Wildcards, NO auto-renewal (testing only, manual intervention required)
+**Complete Error Guide:** [SSL_ERROR_HANDLING_GUIDE.md](SSL_ERROR_HANDLING_GUIDE.md)
 
 ---
 
-## Support
+## Support & Documentation
 
-### Documentation
-- This guide (complete reference)
-- `WEBHOOK_DNS_PROVIDER.md` - Webhook deep dive (if needed)
-- `AUTO_RENEWAL_GUIDE.md` - Renewal details (if needed)
+### Main Guides
+- **Integration Guide:** `WEB_TEAM_INTEGRATION_GUIDE.md` (this document)
+- **SSL Reference:** `SSL_COMPLETE_INTEGRATION_GUIDE.md`
+- **DNS API Reference:** `DNS_LOOKUP_API.md`
+- **Error Handling:** `SSL_ERROR_HANDLING_GUIDE.md` ⭐ NEW
 
-### Debugging
-- Agent logs: `journalctl -u jetcamer-agent -f`
-- Agent health: `curl http://{AGENT_IP}:9811/health`
-- Certificate list: `curl http://{AGENT_IP}:9811/agent/ssl`
+### Quick References
+- **DNS Commands:** `DNS_API_QUICK_REFERENCE.md`
+- **Auto-Renewal:** Built-in, no code needed!
 
-### Test Scripts (Optional)
-- `backend/cyber-agent/agent-go/scripts/test-ssl-http01.sh`
-- `backend/cyber-agent/agent-go/scripts/test-ssl-all-webservers.sh`
-
----
-
-## Summary
-
-**This one document provides everything your web team needs:**
-
-✅ **Quick start** - Issue first certificate in 5 minutes  
-✅ **Complete API reference** - All endpoints documented  
-✅ **Webhook setup** - For wildcard support  
-✅ **Auto-renewal** - **Built into agent, no code needed!** 🎉  
-✅ **Error handling** - Common issues and fixes  
-✅ **Testing guide** - Verify everything works  
-✅ **Production checklist** - Deployment steps  
-
-**Integration time:** ~30 minutes for complete setup (no renewal code needed!)  
-**Benefit:** Fully automated SSL with wildcard support forever! ♾️
+### Documentation Index
+- **Navigation:** `WEB_TEAM_DOCS_INDEX.md`
 
 ---
 
-**This is the ONLY document the web team needs for integration.** ✅
+**Ready to integrate!** 🚀
 

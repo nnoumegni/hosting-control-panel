@@ -38,8 +38,31 @@ export async function apiFetch<T>(input: string | URL, init?: RequestInit): Prom
   const response = await fetch(url, requestInit);
 
   if (!response.ok) {
-    const errorBody = (await response.json().catch(() => null)) as { message?: string } | null;
-    throw new Error(errorBody?.message ?? `Request failed with status ${response.status}`);
+    let errorBody: any = null;
+    let errorText = '';
+    
+    try {
+      errorText = await response.text();
+      if (errorText) {
+        try {
+          errorBody = JSON.parse(errorText);
+        } catch {
+          // If JSON parsing fails, use the text as error message
+          errorBody = { error: errorText };
+        }
+      }
+    } catch {
+      errorBody = { error: `HTTP ${response.status}: ${response.statusText}` };
+    }
+    
+    const errorMessage = errorBody?.error || errorBody?.message || errorText || `HTTP ${response.status}: ${response.statusText}`;
+    const error = new Error(typeof errorMessage === 'string' ? errorMessage : JSON.stringify(errorMessage));
+    (error as any).response = { 
+      data: errorBody, 
+      status: response.status, 
+      statusText: response.statusText 
+    };
+    throw error;
   }
 
   return (await response.json()) as T;

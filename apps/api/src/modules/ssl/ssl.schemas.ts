@@ -8,12 +8,24 @@ export const domainQuerySchema = z.object({
   domain: z.string().optional(),
 });
 
+export const dnsProviderCredentialsSchema = z.record(z.string());
+
+export const dnsProviderSchema = z.object({
+  provider: z.enum(['webhook', 'route53', 'cloudflare']),
+  credentials: dnsProviderCredentialsSchema,
+});
+
 export const issueCertificateBodySchema = z.object({
   domain: z.string().min(1, 'Domain is required'),
+  altNames: z.array(z.string()).optional(),
+  challengeType: z.enum(['http', 'dns']).optional().default('http'),
+  dnsProvider: dnsProviderSchema.optional(),
 });
 
 export const renewCertificateBodySchema = z.object({
   domain: z.string().min(1, 'Domain is required'),
+  challengeType: z.enum(['http', 'dns']).optional(),
+  dnsProvider: dnsProviderSchema.optional(),
 });
 
 export const revokeCertificateBodySchema = z.object({
@@ -27,6 +39,11 @@ export const configureACMEAccountBodySchema = z.object({
 
 export const checkDomainQuerySchema = z.object({
   domain: z.string().min(1, 'Domain is required'),
+});
+
+export const downloadCertificateQuerySchema = z.object({
+  domain: z.string().min(1, 'Domain is required'),
+  format: z.enum(['json', 'pem', 'zip']).optional().default('json'),
 });
 
 export type IssueCertificateBody = z.infer<typeof issueCertificateBodySchema>;

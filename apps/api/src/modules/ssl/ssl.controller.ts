@@ -26,15 +26,38 @@ export const createSSLController = (service: SSLService) => ({
   issueCertificate: asyncHandler(async (req: Request, res: Response) => {
     const instanceId = req.query.instanceId as string | undefined;
     const body = req.body as IssueCertificateBody;
-    const certificate = await service.issueCertificate(instanceId, body.domain);
-    res.status(201).json(certificate);
+    
+    // Use advanced method if DNS challenge or altNames are provided
+    if (body.challengeType === 'dns' || body.altNames || body.dnsProvider) {
+      const certificate = await service.issueCertificateAdvanced(instanceId, {
+        domain: body.domain,
+        altNames: body.altNames,
+        challengeType: body.challengeType,
+        dnsProvider: body.dnsProvider,
+      });
+      res.status(201).json(certificate);
+    } else {
+      const certificate = await service.issueCertificate(instanceId, body.domain);
+      res.status(201).json(certificate);
+    }
   }),
 
   renewCertificate: asyncHandler(async (req: Request, res: Response) => {
     const instanceId = req.query.instanceId as string | undefined;
     const body = req.body as RenewCertificateBody;
-    const certificate = await service.renewCertificate(instanceId, body.domain);
-    res.json(certificate);
+    
+    // Use advanced method if DNS challenge is provided
+    if (body.challengeType === 'dns' || body.dnsProvider) {
+      const certificate = await service.renewCertificateAdvanced(instanceId, {
+        domain: body.domain,
+        challengeType: body.challengeType,
+        dnsProvider: body.dnsProvider,
+      });
+      res.json(certificate);
+    } else {
+      const certificate = await service.renewCertificate(instanceId, body.domain);
+      res.json(certificate);
+    }
   }),
 
   revokeCertificate: asyncHandler(async (req: Request, res: Response) => {
@@ -65,6 +88,32 @@ export const createSSLController = (service: SSLService) => ({
       return;
     }
     const result = await service.checkDomain(instanceId, domain);
+    res.json(result);
+  }),
+
+  downloadCertificate: asyncHandler(async (req: Request, res: Response) => {
+    const instanceId = req.query.instanceId as string | undefined;
+    const domain = req.query.domain as string;
+    const format = (req.query.format as 'json' | 'pem' | 'zip') || 'json';
+    
+    if (!domain) {
+      res.status(400).json({ error: 'domain query parameter is required' });
+      return;
+    }
+    
+    const result = await service.downloadCertificate(instanceId, domain, format);
+    res.json(result);
+  }),
+
+  getAutoRenewalStatus: asyncHandler(async (req: Request, res: Response) => {
+    const instanceId = req.query.instanceId as string | undefined;
+    const status = await service.getAutoRenewalStatus(instanceId);
+    res.json(status);
+  }),
+
+  triggerAutoRenewal: asyncHandler(async (req: Request, res: Response) => {
+    const instanceId = req.query.instanceId as string | undefined;
+    const result = await service.triggerAutoRenewal(instanceId);
     res.json(result);
   }),
 });

@@ -19,6 +19,9 @@ export interface SSLCertificate {
   acmeEnvironment?: string;
   acmeAccountEmail?: string;
   lastRenewalAttempt?: string;
+  autoRenewEnabled?: boolean;
+  challengeType?: 'http' | 'dns';
+  sans?: string[];
 }
 
 export interface SSLCertificateHealth extends SSLCertificate {
@@ -283,6 +286,107 @@ export class SSLService {
       '/agent/ssl/check-domain',
       undefined,
       { domain },
+    );
+  }
+
+  /**
+   * Download certificate bundle
+   */
+  async downloadCertificate(
+    instanceId: string | undefined,
+    domain: string,
+    format: 'json' | 'pem' | 'zip' = 'json',
+  ): Promise<any> {
+    const targetInstanceId = await this.resolveInstanceId(instanceId);
+    return this.agentRequest<any>(
+      targetInstanceId,
+      'GET',
+      '/agent/ssl/download',
+      undefined,
+      { domain, format },
+    );
+  }
+
+  /**
+   * Get auto-renewal status
+   */
+  async getAutoRenewalStatus(instanceId?: string): Promise<{
+    enabled: boolean;
+    running: boolean;
+    checkInterval: string;
+    renewalThreshold: number;
+    maxRetries: number;
+  }> {
+    const targetInstanceId = await this.resolveInstanceId(instanceId);
+    return this.agentRequest<{
+      enabled: boolean;
+      running: boolean;
+      checkInterval: string;
+      renewalThreshold: number;
+      maxRetries: number;
+    }>(
+      targetInstanceId,
+      'GET',
+      '/agent/ssl/auto-renewal/status',
+    );
+  }
+
+  /**
+   * Trigger auto-renewal check manually
+   */
+  async triggerAutoRenewal(instanceId?: string): Promise<{ status: string; message: string }> {
+    const targetInstanceId = await this.resolveInstanceId(instanceId);
+    return this.agentRequest<{ status: string; message: string }>(
+      targetInstanceId,
+      'POST',
+      '/agent/ssl/auto-renewal/trigger',
+    );
+  }
+
+  /**
+   * Issue certificate with advanced options (DNS-01, wildcard, etc.)
+   */
+  async issueCertificateAdvanced(
+    instanceId: string | undefined,
+    config: {
+      domain: string;
+      altNames?: string[];
+      challengeType?: 'http' | 'dns';
+      dnsProvider?: {
+        provider: 'webhook' | 'route53' | 'cloudflare';
+        credentials: Record<string, string>;
+      };
+    },
+  ): Promise<SSLCertificate> {
+    const targetInstanceId = await this.resolveInstanceId(instanceId);
+    return this.agentRequest<SSLCertificate>(
+      targetInstanceId,
+      'POST',
+      '/agent/ssl/issue',
+      config,
+    );
+  }
+
+  /**
+   * Renew certificate with advanced options
+   */
+  async renewCertificateAdvanced(
+    instanceId: string | undefined,
+    config: {
+      domain: string;
+      challengeType?: 'http' | 'dns';
+      dnsProvider?: {
+        provider: 'webhook' | 'route53' | 'cloudflare';
+        credentials: Record<string, string>;
+      };
+    },
+  ): Promise<SSLCertificate> {
+    const targetInstanceId = await this.resolveInstanceId(instanceId);
+    return this.agentRequest<SSLCertificate>(
+      targetInstanceId,
+      'POST',
+      '/agent/ssl/renew',
+      config,
     );
   }
 }

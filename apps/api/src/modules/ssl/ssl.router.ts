@@ -9,6 +9,7 @@ import {
   revokeCertificateBodySchema,
   configureACMEAccountBodySchema,
   checkDomainQuerySchema,
+  downloadCertificateQuerySchema,
 } from './ssl.schemas.js';
 
 export const createSSLRouter = (service: SSLService) => {
@@ -83,6 +84,29 @@ export const createSSLRouter = (service: SSLService) => {
       query: checkDomainQuerySchema.extend({ instanceId: z.string().optional() }),
     }),
     controller.checkDomain,
+  );
+
+  // Download certificate
+  router.get(
+    '/download',
+    validateRequest({ 
+      query: downloadCertificateQuerySchema.extend({ instanceId: z.string().optional() }),
+    }),
+    controller.downloadCertificate,
+  );
+
+  // Get auto-renewal status
+  router.get(
+    '/auto-renewal/status',
+    validateRequest({ query: z.object({ instanceId: z.string().optional() }).passthrough() }),
+    controller.getAutoRenewalStatus,
+  );
+
+  // Trigger auto-renewal check
+  router.post(
+    '/auto-renewal/trigger',
+    validateRequest({ query: z.object({ instanceId: z.string().optional() }).passthrough() }),
+    controller.triggerAutoRenewal,
   );
 
   return router;
