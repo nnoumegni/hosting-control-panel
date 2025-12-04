@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { PublicLayout } from '../../components/public-layout';
+import { PublicLayout } from '../../../components/public-layout';
 
 export default function ServicesPage() {
   return (

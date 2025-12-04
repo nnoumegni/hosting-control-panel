@@ -1,4 +1,4 @@
-import { PublicLayout } from '../../components/public-layout';
+import { PublicLayout } from '../../../components/public-layout';
 
 export default function ContactPage() {
   return (

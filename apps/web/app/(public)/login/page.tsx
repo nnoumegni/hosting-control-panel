@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { apiFetch } from '../../lib/api';
+import { apiFetch } from '../../../lib/api';
 
 export default function LoginPage() {
   const router = useRouter();

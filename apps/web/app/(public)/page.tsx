@@ -1,6 +1,6 @@
 import Link from 'next/link';
-import { PublicLayout } from '../components/public-layout';
-import { WavesAnimation } from '../components/waves-animation';
+import { PublicLayout } from '../../components/public-layout';
+import { WavesAnimation } from '../../components/waves-animation';
 
 export default function HomePage() {
   return (

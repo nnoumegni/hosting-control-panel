@@ -19,9 +19,9 @@ body {
   box-sizing: border-box;
 }
 
-:root {
-  --top-bar-height: 56px; /* Approximate height of the top navigation bar */
-}
+/* Prevent template CSS from affecting dashboard */
+/* Template CSS (bootstrap, style.css) should only apply to public pages */
+/* Dashboard uses Tailwind exclusively */
 
 /* Fix for box-icon image centering */
 .feature-card .box-icon {

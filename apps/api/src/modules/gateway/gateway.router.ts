@@ -10,5 +10,10 @@ export const createGatewayRouter = (service: GatewayService) => {
   router.put('/ai-settings', controller.updateAISettings);
   router.get('/server-settings', controller.getServerSettings);
 
+  // Gateway agent endpoints
+  router.get('/status', controller.getStatus);
+  router.get('/rules', controller.getRules);
+  router.get('/stats', controller.getStats);
+
   return router;
 };
