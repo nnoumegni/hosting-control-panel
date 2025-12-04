@@ -156,14 +156,24 @@ export class SSLService {
 
       if (!response.ok) {
         const errorText = await response.text().catch(() => 'Unknown error');
-        let errorData: { error?: string } | null = null;
+        let errorData: any = null;
         try {
           errorData = JSON.parse(errorText);
         } catch {
           // Not JSON, use text as is
+          errorData = { error: errorText, message: errorText };
         }
-        const errorMessage = errorData?.error || errorText || `HTTP ${response.status}`;
-        throw new Error(errorMessage);
+        
+        // Preserve structured error response from agent (as per documentation)
+        const structuredError: any = new Error(errorData?.message || errorData?.error || errorText || `HTTP ${response.status}`);
+        structuredError.statusCode = response.status;
+        structuredError.error = errorData?.error;
+        structuredError.message = errorData?.message || errorData?.error || errorText;
+        structuredError.action = errorData?.action;
+        structuredError.details = errorData?.details;
+        structuredError.rawError = errorData?.rawError;
+        structuredError.response = errorData;
+        throw structuredError;
       }
 
       const data = await response.json() as T;

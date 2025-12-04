@@ -24,7 +24,7 @@ interface CertificateListProps {
   isLoading: boolean;
   actionLoading: Record<string, boolean>;
   instanceId: string;
-  onRenew: (domain: string) => Promise<void>;
+  onRenew: (domain: string) => void;
   onRevoke: (domain: string) => Promise<void>;
   onDownload: (domain: string, format: 'json' | 'pem' | 'zip') => Promise<void>;
 }

@@ -27,18 +27,35 @@ export const createSSLController = (service: SSLService) => ({
     const instanceId = req.query.instanceId as string | undefined;
     const body = req.body as IssueCertificateBody;
     
-    // Use advanced method if DNS challenge or altNames are provided
-    if (body.challengeType === 'dns' || body.altNames || body.dnsProvider) {
-      const certificate = await service.issueCertificateAdvanced(instanceId, {
-        domain: body.domain,
-        altNames: body.altNames,
-        challengeType: body.challengeType,
-        dnsProvider: body.dnsProvider,
-      });
-      res.status(201).json(certificate);
-    } else {
-      const certificate = await service.issueCertificate(instanceId, body.domain);
-      res.status(201).json(certificate);
+    try {
+      // Use advanced method if DNS challenge or altNames are provided
+      if (body.challengeType === 'dns' || body.altNames || body.dnsProvider) {
+        const certificate = await service.issueCertificateAdvanced(instanceId, {
+          domain: body.domain,
+          altNames: body.altNames,
+          challengeType: body.challengeType,
+          dnsProvider: body.dnsProvider,
+        });
+        res.status(201).json(certificate);
+      } else {
+        const certificate = await service.issueCertificate(instanceId, body.domain);
+        res.status(201).json(certificate);
+      }
+    } catch (error: any) {
+      // Forward structured error from agent (preserves error, message, action, details, rawError)
+      if (error.statusCode && error.response) {
+        res.status(error.statusCode).json({
+          success: false,
+          error: error.error || error.message,
+          message: error.message,
+          action: error.action,
+          details: error.details,
+          rawError: error.rawError,
+        });
+        return;
+      }
+      // Re-throw for default error handler if not a structured error
+      throw error;
     }
   }),
 

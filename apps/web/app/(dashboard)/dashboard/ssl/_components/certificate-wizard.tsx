@@ -37,14 +37,25 @@ interface CertificateWizardProps {
   onClose: () => void;
   onSuccess: () => void;
   instanceId: string;
+  initialDomain?: string;
+  initialPrefixes?: string[];
+  initialChallengeType?: 'http' | 'dns';
 }
 
-export function CertificateWizard({ isOpen, onClose, onSuccess, instanceId }: CertificateWizardProps) {
+export function CertificateWizard({ 
+  isOpen, 
+  onClose, 
+  onSuccess, 
+  instanceId,
+  initialDomain,
+  initialPrefixes,
+  initialChallengeType,
+}: CertificateWizardProps) {
   const [step, setStep] = useState(1);
-  const [domain, setDomain] = useState('');
-  const [prefixes, setPrefixes] = useState<string[]>(['www']);
+  const [domain, setDomain] = useState(initialDomain || '');
+  const [prefixes, setPrefixes] = useState<string[]>(initialPrefixes || ['www']);
   const [newPrefix, setNewPrefix] = useState('');
-  const [challengeType, setChallengeType] = useState<'http' | 'dns'>('http');
+  const [challengeType, setChallengeType] = useState<'http' | 'dns'>(initialChallengeType || 'http');
   const [email, setEmail] = useState('');
   const [useStaging, setUseStaging] = useState(false);
   const [domainCheckResult, setDomainCheckResult] = useState<DomainCheck | null>(null);
@@ -55,6 +66,7 @@ export function CertificateWizard({ isOpen, onClose, onSuccess, instanceId }: Ce
   const [issueErrorDetails, setIssueErrorDetails] = useState<string | null>(null);
   const [acmeAccount, setAcmeAccount] = useState<ACMEAccount | null>(null);
   const [showWebhookHelp, setShowWebhookHelp] = useState(false);
+  const [acmeError, setAcmeError] = useState<string | null>(null);
 
   // Webhook DNS configuration
   const [webhookPresentUrl, setWebhookPresentUrl] = useState('');
@@ -65,8 +77,36 @@ export function CertificateWizard({ isOpen, onClose, onSuccess, instanceId }: Ce
   useEffect(() => {
     if (isOpen) {
       void loadACMEAccount();
+      // Set initial values if provided
+      if (initialDomain) {
+        setDomain(initialDomain);
+      }
+      if (initialPrefixes) {
+        setPrefixes(initialPrefixes);
+      }
+      if (initialChallengeType) {
+        setChallengeType(initialChallengeType);
+      }
+      // Reset wizard state
+      setStep(1);
+      setNewPrefix('');
+      setDomainCheckResult(null);
+      setIssueLogs([]);
+      setIssueError(null);
+      setIssueErrorDetails(null);
+    } else {
+      // Reset when modal closes
+      setDomain('');
+      setPrefixes(['www']);
+      setNewPrefix('');
+      setChallengeType('http');
+      setStep(1);
+      setDomainCheckResult(null);
+      setIssueLogs([]);
+      setIssueError(null);
+      setIssueErrorDetails(null);
     }
-  }, [isOpen, instanceId]);
+  }, [isOpen, instanceId, initialDomain, initialPrefixes, initialChallengeType]);
 
   const loadACMEAccount = async () => {
     try {
@@ -209,17 +249,36 @@ export function CertificateWizard({ isOpen, onClose, onSuccess, instanceId }: Ce
         addLog('Using HTTP-01 challenge...');
       }
 
-      const certificate = await apiFetch<SSLCertificate>(
-        `ssl/issue?instanceId=${encodeURIComponent(instanceId)}`,
-        {
-          method: 'POST',
-          body: JSON.stringify(issueConfig),
-        }
-      );
+      addLog('Sending certificate issuance request...');
+      addLog('This may take 30-60 seconds. Please wait...');
+      
+      // Add timeout wrapper to prevent hanging indefinitely
+      const certificate = await Promise.race([
+        apiFetch<SSLCertificate>(
+          `ssl/issue?instanceId=${encodeURIComponent(instanceId)}`,
+          {
+            method: 'POST',
+            body: JSON.stringify(issueConfig),
+          }
+        ),
+        new Promise<never>((_, reject) => 
+          setTimeout(() => reject(new Error('Certificate issuance timed out after 5 minutes. Please check the server logs and try again.')), 300000)
+        ),
+      ]);
 
-      addLog(`Certificate issued successfully. Expires at ${new Date(certificate.expiresAt).toLocaleString()}`);
-      resetWizard();
-      onSuccess();
+      addLog(`✓ Certificate issued successfully!`);
+      addLog(`  Domain: ${certificate.domain}`);
+      if (certificate.sans && certificate.sans.length > 0) {
+        addLog(`  Additional domains: ${certificate.sans.join(', ')}`);
+      }
+      addLog(`  Expires: ${new Date(certificate.expiresAt).toLocaleString()}`);
+      addLog(`  Status: ${certificate.status}`);
+      
+      // Show success message for a moment before closing
+      setTimeout(() => {
+        resetWizard();
+        onSuccess();
+      }, 2000);
     } catch (err: any) {
       // Extract detailed error message from structured error response (as per documentation)
       let errorMessage = 'Failed to issue certificate';
@@ -329,6 +388,7 @@ export function CertificateWizard({ isOpen, onClose, onSuccess, instanceId }: Ce
     setIssueLogs([]);
     setIssueError(null);
     setIssueErrorDetails(null);
+    setAcmeError(null);
     setWebhookPresentUrl('');
     setWebhookCleanupUrl('');
     setWebhookAuthHeader('');
@@ -451,17 +511,43 @@ export function CertificateWizard({ isOpen, onClose, onSuccess, instanceId }: Ce
 
               {domainCheckResult && (
                 <div
-                  className={`text-xs p-3 rounded-lg ${
+                  className={`rounded-xl border-2 p-4 ${
                     domainCheckResult.error || domainCheckResult.ips.length === 0
-                      ? 'bg-red-500/10 border border-red-500/40 text-red-400'
-                      : 'bg-emerald-500/10 border border-emerald-500/40 text-emerald-400'
+                      ? 'border-red-500/50 bg-gradient-to-br from-red-500/10 to-red-600/5 shadow-lg shadow-red-500/10'
+                      : 'border-emerald-500/50 bg-gradient-to-br from-emerald-500/10 to-emerald-600/5 shadow-lg shadow-emerald-500/10'
                   }`}
                 >
-                  {domainCheckResult.error
-                    ? `DNS lookup failed: ${domainCheckResult.error}`
-                    : domainCheckResult.ips.length === 0
-                      ? 'No A/AAAA records found'
-                      : `Resolved to: ${domainCheckResult.ips.join(', ')}`}
+                  <div className="flex items-start gap-3">
+                    {domainCheckResult.error || domainCheckResult.ips.length === 0 ? (
+                      <AlertTriangle className="h-5 w-5 text-red-400 flex-shrink-0 mt-0.5" />
+                    ) : (
+                      <CheckCircle2 className="h-5 w-5 text-emerald-400 flex-shrink-0 mt-0.5" />
+                    )}
+                    <div className="flex-1">
+                      <div className={`text-sm font-semibold mb-1 ${
+                        domainCheckResult.error || domainCheckResult.ips.length === 0
+                          ? 'text-red-200'
+                          : 'text-emerald-200'
+                      }`}>
+                        {domainCheckResult.error
+                          ? 'DNS Check Failed'
+                          : domainCheckResult.ips.length === 0
+                            ? 'No DNS Records Found'
+                            : 'DNS Check Passed'}
+                      </div>
+                      <div className={`text-xs ${
+                        domainCheckResult.error || domainCheckResult.ips.length === 0
+                          ? 'text-red-300/90'
+                          : 'text-emerald-300/90'
+                      }`}>
+                        {domainCheckResult.error
+                          ? domainCheckResult.error
+                          : domainCheckResult.ips.length === 0
+                            ? 'No A/AAAA records found for this domain. Please add DNS records pointing to your server.'
+                            : `Domain resolves to: ${domainCheckResult.ips.join(', ')}`}
+                      </div>
+                    </div>
+                  </div>
                 </div>
               )}
             </div>
@@ -505,10 +591,11 @@ export function CertificateWizard({ isOpen, onClose, onSuccess, instanceId }: Ce
                 </button>
                 <button
                   onClick={async () => {
+                    setAcmeError(null);
                     try {
                       await configureACME();
                     } catch (err: any) {
-                      alert(err.message || 'Failed to configure ACME account');
+                      setAcmeError(err.message || 'Failed to configure ACME account');
                     }
                   }}
                   disabled={!email.trim()}
@@ -517,6 +604,27 @@ export function CertificateWizard({ isOpen, onClose, onSuccess, instanceId }: Ce
                   Save & Continue
                 </button>
               </div>
+
+              {/* ACME Configuration Error */}
+              {acmeError && (
+                <div className="rounded-xl border-2 border-red-500/50 bg-gradient-to-br from-red-500/10 to-red-600/5 p-4 shadow-lg shadow-red-500/10">
+                  <div className="flex items-start gap-3">
+                    <div className="flex-shrink-0">
+                      <div className="rounded-full bg-red-500/20 p-2">
+                        <AlertTriangle className="h-4 w-4 text-red-400" />
+                      </div>
+                    </div>
+                    <div className="flex-1">
+                      <div className="text-sm font-semibold text-red-200 mb-1">
+                        ACME Configuration Failed
+                      </div>
+                      <div className="text-xs text-red-300/90">
+                        {acmeError}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -739,19 +847,28 @@ export function CertificateWizard({ isOpen, onClose, onSuccess, instanceId }: Ce
 
               {/* Error Alert */}
               {issueError && (
-                <div className="mt-4 rounded-lg border border-red-500/40 bg-red-500/10 p-4">
-                  <div className="flex items-start gap-3">
-                    <AlertTriangle className="h-5 w-5 text-red-400 flex-shrink-0 mt-0.5" />
-                    <div className="flex-1">
-                      <div className="text-sm font-semibold text-red-200 mb-1">
+                <div className="mt-4 rounded-xl border-2 border-red-500/50 bg-gradient-to-br from-red-500/10 to-red-600/5 p-5 shadow-lg shadow-red-500/10">
+                  <div className="flex items-start gap-4">
+                    <div className="flex-shrink-0">
+                      <div className="rounded-full bg-red-500/20 p-2">
+                        <AlertTriangle className="h-5 w-5 text-red-400" />
+                      </div>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-bold text-red-200 mb-2">
                         Certificate Issuance Failed
                       </div>
-                      <div className="text-xs text-red-300/90 font-medium mb-2">
+                      <div className="text-sm text-red-100 font-medium mb-3 leading-relaxed">
                         {issueError}
                       </div>
                       {issueErrorDetails && (
-                        <div className="text-xs text-red-300/70 mt-2 pt-2 border-t border-red-500/20">
-                          {issueErrorDetails}
+                        <div className="rounded-lg bg-red-500/10 border border-red-500/30 p-3 mt-3">
+                          <div className="text-xs font-semibold text-red-300/90 mb-1.5 uppercase tracking-wide">
+                            What to do:
+                          </div>
+                          <div className="text-xs text-red-200/80 leading-relaxed">
+                            {issueErrorDetails}
+                          </div>
                         </div>
                       )}
                     </div>

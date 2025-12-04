@@ -39,6 +39,9 @@ export default function SSLPage() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [showWizard, setShowWizard] = useState(false);
+  const [wizardInitialDomain, setWizardInitialDomain] = useState<string | undefined>(undefined);
+  const [wizardInitialPrefixes, setWizardInitialPrefixes] = useState<string[] | undefined>(undefined);
+  const [wizardInitialChallengeType, setWizardInitialChallengeType] = useState<'http' | 'dns' | undefined>(undefined);
   const [activeTab, setActiveTab] = useState<'certificates' | 'auto-renewal'>('certificates');
   const [actionLoading, setActionLoading] = useState<Record<string, boolean>>({});
 
@@ -111,28 +114,46 @@ export default function SSLPage() {
     await loadAllData(true);
   }, [loadAllData]);
 
-  const handleRenew = async (domain: string) => {
+  const handleRenew = (certificate: SSLCertificateHealth) => {
     if (!selectedInstanceId) return;
 
-    setActionLoading((prev) => ({ ...prev, [`renew-${domain}`]: true }));
-    setError(null);
-    setSuccess(null);
-
-    try {
-      await apiFetch(
-        `ssl/renew?instanceId=${encodeURIComponent(selectedInstanceId)}`,
-        {
-          method: 'POST',
-          body: JSON.stringify({ domain }),
-        }
-      );
-      setSuccess(`Certificate renewed for ${domain}`);
-      await loadAllData(true);
-    } catch (err: any) {
-      setError(err.message || `Failed to renew certificate for ${domain}`);
-    } finally {
-      setActionLoading((prev) => ({ ...prev, [`renew-${domain}`]: false }));
+    // Extract the base domain (remove www if present)
+    const baseDomain = certificate.domain.replace(/^www\./, '');
+    
+    // Build prefixes list from SANs
+    let prefixes: string[] = ['www'];
+    if (certificate.sans && certificate.sans.length > 0) {
+      // Extract prefixes from SANs
+      const extractedPrefixes = certificate.sans
+        .map((san) => {
+          // Normalize: remove www prefix and base domain suffix
+          let normalized = san.replace(/^www\./, '');
+          const baseDomainRegex = new RegExp(`\\.${baseDomain.replace(/\./g, '\\.')}$`);
+          normalized = normalized.replace(baseDomainRegex, '');
+          
+          // Handle wildcard (*.example.com -> *)
+          if (normalized === '*') {
+            return '*';
+          }
+          
+          // If it's a simple subdomain prefix (no dots remaining), return it
+          if (normalized && !normalized.includes('.')) {
+            return normalized;
+          }
+          
+          return null;
+        })
+        .filter((p): p is string => p !== null && p !== 'www');
+      
+      // Combine with www, removing duplicates
+      prefixes = Array.from(new Set(['www', ...extractedPrefixes]));
     }
+
+    // Set initial values and open wizard
+    setWizardInitialDomain(baseDomain);
+    setWizardInitialPrefixes(prefixes);
+    setWizardInitialChallengeType(certificate.challengeType || 'http');
+    setShowWizard(true);
   };
 
   const handleRevoke = async (domain: string) => {
@@ -232,7 +253,12 @@ export default function SSLPage() {
         </div>
         <div className="flex items-center gap-3">
           <button
-            onClick={() => setShowWizard(true)}
+            onClick={() => {
+              setWizardInitialDomain(undefined);
+              setWizardInitialPrefixes(undefined);
+              setWizardInitialChallengeType(undefined);
+              setShowWizard(true);
+            }}
             className="flex items-center gap-2 px-4 py-2 rounded-lg bg-sky-600 hover:bg-sky-500 text-sm font-medium transition"
           >
             <Plus className="h-4 w-4" />
@@ -307,7 +333,12 @@ export default function SSLPage() {
                 isLoading={isLoading}
                 actionLoading={actionLoading}
                 instanceId={selectedInstanceId}
-                onRenew={handleRenew}
+                onRenew={(domain) => {
+                  const cert = certificates.find((c) => c.domain === domain);
+                  if (cert) {
+                    void handleRenew(cert);
+                  }
+                }}
                 onRevoke={handleRevoke}
                 onDownload={handleDownload}
               />
@@ -326,12 +357,23 @@ export default function SSLPage() {
       {showWizard && (
         <CertificateWizard
           isOpen={showWizard}
-          onClose={() => setShowWizard(false)}
+          onClose={() => {
+            setShowWizard(false);
+            setWizardInitialDomain(undefined);
+            setWizardInitialPrefixes(undefined);
+            setWizardInitialChallengeType(undefined);
+          }}
           onSuccess={() => {
             setShowWizard(false);
+            setWizardInitialDomain(undefined);
+            setWizardInitialPrefixes(undefined);
+            setWizardInitialChallengeType(undefined);
             void loadAllData(true);
           }}
           instanceId={selectedInstanceId}
+          initialDomain={wizardInitialDomain}
+          initialPrefixes={wizardInitialPrefixes}
+          initialChallengeType={wizardInitialChallengeType}
         />
       )}
     </div>
