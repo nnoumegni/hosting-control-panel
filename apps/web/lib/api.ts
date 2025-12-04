@@ -35,7 +35,17 @@ export async function apiFetch<T>(input: string | URL, init?: RequestInit): Prom
     },
   };
 
-  const response = await fetch(url, requestInit);
+  // Add timeout for long-running requests (like certificate issuance)
+  const timeout = 300000; // 5 minutes
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeout);
+  
+  try {
+    const response = await fetch(url, {
+      ...requestInit,
+      signal: controller.signal,
+    });
+    clearTimeout(timeoutId);
 
   if (!response.ok) {
     let errorBody: any = null;
@@ -65,7 +75,14 @@ export async function apiFetch<T>(input: string | URL, init?: RequestInit): Prom
     throw error;
   }
 
-  return (await response.json()) as T;
+    return (await response.json()) as T;
+  } catch (error: any) {
+    clearTimeout(timeoutId);
+    if (error.name === 'AbortError') {
+      throw new Error('Request timed out. Please try again.');
+    }
+    throw error;
+  }
 }
 
 

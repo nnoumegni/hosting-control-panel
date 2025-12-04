@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { Loader2, X, Info, HelpCircle, CheckCircle2, AlertTriangle } from 'lucide-react';
+import { Loader2, X, Info, HelpCircle, CheckCircle2, AlertTriangle, Shield } from 'lucide-react';
 import { apiFetch } from '../../../../../lib/api';
 
 interface ACMEAccount {
@@ -64,6 +64,7 @@ export function CertificateWizard({
   const [issueLogs, setIssueLogs] = useState<string[]>([]);
   const [issueError, setIssueError] = useState<string | null>(null);
   const [issueErrorDetails, setIssueErrorDetails] = useState<string | null>(null);
+  const [issueSuccess, setIssueSuccess] = useState<SSLCertificate | null>(null);
   const [acmeAccount, setAcmeAccount] = useState<ACMEAccount | null>(null);
   const [showWebhookHelp, setShowWebhookHelp] = useState(false);
   const [acmeError, setAcmeError] = useState<string | null>(null);
@@ -94,6 +95,7 @@ export function CertificateWizard({
       setIssueLogs([]);
       setIssueError(null);
       setIssueErrorDetails(null);
+      setIssueSuccess(null);
     } else {
       // Reset when modal closes
       setDomain('');
@@ -105,6 +107,7 @@ export function CertificateWizard({
       setIssueLogs([]);
       setIssueError(null);
       setIssueErrorDetails(null);
+      setIssueSuccess(null);
     }
   }, [isOpen, instanceId, initialDomain, initialPrefixes, initialChallengeType]);
 
@@ -252,42 +255,39 @@ export function CertificateWizard({
       addLog('Sending certificate issuance request...');
       addLog('This may take 30-60 seconds. Please wait...');
       
-      // Add timeout wrapper to prevent hanging indefinitely
-      const certificate = await Promise.race([
-        apiFetch<SSLCertificate>(
-          `ssl/issue?instanceId=${encodeURIComponent(instanceId)}`,
-          {
-            method: 'POST',
-            body: JSON.stringify(issueConfig),
-          }
-        ),
-        new Promise<never>((_, reject) => 
-          setTimeout(() => reject(new Error('Certificate issuance timed out after 5 minutes. Please check the server logs and try again.')), 300000)
-        ),
-      ]);
+      // Make the API call with proper error handling
+      const certificate = await apiFetch<SSLCertificate>(
+        `ssl/issue?instanceId=${encodeURIComponent(instanceId)}`,
+        {
+          method: 'POST',
+          body: JSON.stringify(issueConfig),
+        }
+      ).catch((fetchError: any) => {
+        // Log the error for debugging
+        console.error('API fetch error:', fetchError);
+        addLog(`❌ API request failed: ${fetchError?.message || 'Unknown error'}`);
+        throw fetchError;
+      });
 
-      addLog(`✓ Certificate issued successfully!`);
-      addLog(`  Domain: ${certificate.domain}`);
-      if (certificate.sans && certificate.sans.length > 0) {
-        addLog(`  Additional domains: ${certificate.sans.join(', ')}`);
-      }
-      addLog(`  Expires: ${new Date(certificate.expiresAt).toLocaleString()}`);
-      addLog(`  Status: ${certificate.status}`);
+      // Store success certificate and stop spinner
+      setIssueSuccess(certificate);
+      setIsIssuing(false);
       
-      // Show success message for a moment before closing
+      // Auto-close after 3 seconds
       setTimeout(() => {
         resetWizard();
         onSuccess();
-      }, 2000);
+      }, 3000);
     } catch (err: any) {
       // Extract detailed error message from structured error response (as per documentation)
       let errorMessage = 'Failed to issue certificate';
       let errorDetails = '';
       let errorAction = '';
+      let errorBody: any = null;
 
       if (err?.response) {
         // Try to get error from response body (structured format from documentation)
-        const errorBody = err.response.data || err.response;
+        errorBody = err.response.data || err.response;
         
         if (typeof errorBody === 'string') {
           errorMessage = errorBody;
@@ -372,9 +372,13 @@ export function CertificateWizard({
       // Log full error for debugging
       console.error('Certificate issuance error:', err);
       
-      throw new Error(errorMessage);
-    } finally {
+      // Stop spinner after error is displayed
       setIsIssuing(false);
+    } finally {
+      // Ensure spinner stops even if there's an unexpected error
+      if (isIssuing) {
+        setIsIssuing(false);
+      }
     }
   };
 
@@ -386,9 +390,10 @@ export function CertificateWizard({
     setChallengeType('http');
     setDomainCheckResult(null);
     setIssueLogs([]);
-    setIssueError(null);
-    setIssueErrorDetails(null);
-    setAcmeError(null);
+      setIssueError(null);
+      setIssueErrorDetails(null);
+      setIssueSuccess(null);
+      setAcmeError(null);
     setWebhookPresentUrl('');
     setWebhookCleanupUrl('');
     setWebhookAuthHeader('');
@@ -792,25 +797,97 @@ export function CertificateWizard({
                 </div>
               )}
 
-              {/* Review Summary */}
-              <div className="p-4 rounded-lg border border-slate-700 bg-slate-950">
-                <div className="text-xs text-slate-300 space-y-2">
-                  <p className="text-slate-200 font-medium mb-2">Review & Issue</p>
-                  <ul className="space-y-1">
-                    <li>• Domain: <span className="font-mono text-sky-300">{domain}</span></li>
-                    {prefixes.length > 0 && (
-                      <li>
-                        • Additional: <span className="font-mono text-sky-300">
-                          {prefixes.map(p => `${p}.${domain}`).join(', ')}
-                        </span>
-                      </li>
-                    )}
-                    <li>• Challenge: <span className="font-mono text-sky-300">{challengeType === 'http' ? 'HTTP-01' : 'DNS-01'}</span></li>
-                    <li>• ACME Email: <span className="font-mono text-sky-300">{email}</span></li>
-                    <li>• Environment: <span className="font-mono text-sky-300">{useStaging ? 'staging' : 'production'}</span></li>
-                  </ul>
+              {/* Review Summary or Response Card */}
+              {issueSuccess || issueError ? (
+                /* Response Card (Success or Error) */
+                issueSuccess ? (
+                  <div className="p-4 rounded-xl border-2 border-emerald-500/50 bg-gradient-to-br from-emerald-500/10 to-emerald-600/5 shadow-lg shadow-emerald-500/10">
+                    <div className="flex items-start gap-4">
+                      <div className="flex-shrink-0">
+                        <div className="rounded-full bg-emerald-500/20 p-2">
+                          <Shield className="h-5 w-5 text-emerald-400" />
+                        </div>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm font-bold text-emerald-200 mb-3">
+                          Certificate Issued Successfully!
+                        </div>
+                        <div className="text-xs text-slate-300 space-y-2">
+                          <div>
+                            <span className="text-slate-400">Domain:</span>{' '}
+                            <span className="font-mono text-emerald-300">{issueSuccess.domain}</span>
+                          </div>
+                          {issueSuccess.sans && issueSuccess.sans.length > 0 && (
+                            <div>
+                              <span className="text-slate-400">Additional domains:</span>{' '}
+                              <span className="font-mono text-emerald-300">{issueSuccess.sans.join(', ')}</span>
+                            </div>
+                          )}
+                          <div>
+                            <span className="text-slate-400">Expires:</span>{' '}
+                            <span className="font-mono text-emerald-300">
+                              {new Date(issueSuccess.expiresAt).toLocaleString()}
+                            </span>
+                          </div>
+                          <div>
+                            <span className="text-slate-400">Status:</span>{' '}
+                            <span className="font-mono text-emerald-300">{issueSuccess.status}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  /* Error Response Card */
+                  <div className="p-4 rounded-xl border-2 border-red-500/50 bg-gradient-to-br from-red-500/10 to-red-600/5 shadow-lg shadow-red-500/10">
+                    <div className="flex items-start gap-4">
+                      <div className="flex-shrink-0">
+                        <div className="rounded-full bg-red-500/20 p-2">
+                          <AlertTriangle className="h-5 w-5 text-red-400" />
+                        </div>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm font-bold text-red-200 mb-2">
+                          Certificate Issuance Failed
+                        </div>
+                        <div className="text-sm text-red-100 font-medium mb-3 leading-relaxed">
+                          {issueError}
+                        </div>
+                        {issueErrorDetails && (
+                          <div className="rounded-lg bg-red-500/10 border border-red-500/30 p-3 mt-3">
+                            <div className="text-xs font-semibold text-red-300/90 mb-1.5 uppercase tracking-wide">
+                              What to do:
+                            </div>
+                            <div className="text-xs text-red-200/80 leading-relaxed">
+                              {issueErrorDetails}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )
+              ) : (
+                /* Review Summary (before/during issuance) */
+                <div className="p-4 rounded-lg border border-slate-700 bg-slate-950">
+                  <div className="text-xs text-slate-300 space-y-2">
+                    <p className="text-slate-200 font-medium mb-2">Review & Issue</p>
+                    <ul className="space-y-1">
+                      <li>• Domain: <span className="font-mono text-sky-300">{domain}</span></li>
+                      {prefixes.length > 0 && (
+                        <li>
+                          • Additional: <span className="font-mono text-sky-300">
+                            {prefixes.map(p => `${p}.${domain}`).join(', ')}
+                          </span>
+                        </li>
+                      )}
+                      <li>• Challenge: <span className="font-mono text-sky-300">{challengeType === 'http' ? 'HTTP-01' : 'DNS-01'}</span></li>
+                      <li>• ACME Email: <span className="font-mono text-sky-300">{email}</span></li>
+                      <li>• Environment: <span className="font-mono text-sky-300">{useStaging ? 'staging' : 'production'}</span></li>
+                    </ul>
+                  </div>
                 </div>
-              </div>
+              )}
 
               <div className="flex items-center justify-between">
                 <button
@@ -845,63 +922,6 @@ export function CertificateWizard({
                 </button>
               </div>
 
-              {/* Error Alert */}
-              {issueError && (
-                <div className="mt-4 rounded-xl border-2 border-red-500/50 bg-gradient-to-br from-red-500/10 to-red-600/5 p-5 shadow-lg shadow-red-500/10">
-                  <div className="flex items-start gap-4">
-                    <div className="flex-shrink-0">
-                      <div className="rounded-full bg-red-500/20 p-2">
-                        <AlertTriangle className="h-5 w-5 text-red-400" />
-                      </div>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="text-sm font-bold text-red-200 mb-2">
-                        Certificate Issuance Failed
-                      </div>
-                      <div className="text-sm text-red-100 font-medium mb-3 leading-relaxed">
-                        {issueError}
-                      </div>
-                      {issueErrorDetails && (
-                        <div className="rounded-lg bg-red-500/10 border border-red-500/30 p-3 mt-3">
-                          <div className="text-xs font-semibold text-red-300/90 mb-1.5 uppercase tracking-wide">
-                            What to do:
-                          </div>
-                          <div className="text-xs text-red-200/80 leading-relaxed">
-                            {issueErrorDetails}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Issue Logs */}
-              {issueLogs.length > 0 && (
-                <div className="mt-2">
-                  <div className="text-xs font-medium text-slate-400 mb-2">Issue Logs:</div>
-                  <div className="text-[11px] font-mono bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 max-h-52 overflow-auto">
-                    {issueLogs.map((log, idx) => {
-                      const isError = log.includes('❌') || log.includes('Error:');
-                      const isSuccess = log.includes('successfully');
-                      return (
-                        <div
-                          key={idx}
-                          className={`${
-                            isError
-                              ? 'text-red-400'
-                              : isSuccess
-                                ? 'text-emerald-400'
-                                : 'text-slate-300'
-                          }`}
-                        >
-                          {log}
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
             </div>
           )}
         </div>

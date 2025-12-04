@@ -151,7 +151,7 @@ export class SSLService {
           'Accept': 'application/json',
         },
         body: body ? JSON.stringify(body) : undefined,
-        signal: AbortSignal.timeout(30000), // 30 seconds
+        signal: AbortSignal.timeout(300000), // 5 minutes for certificate issuance
       });
 
       if (!response.ok) {
