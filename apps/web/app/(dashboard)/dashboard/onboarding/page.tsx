@@ -1,31 +1,32 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { Copy, CheckCircle2, Loader2, Shield, Zap, Lock, Globe, Server, Sparkles } from 'lucide-react';
+import { Copy, CheckCircle2, Loader2, Shield, Zap, Lock, Globe, Server, Sparkles, Check } from 'lucide-react';
 import { apiFetch } from '../../../../lib/api';
 import { useRouter } from 'next/navigation';
+import { AIConfigModal } from '../security/_components/ai-config-modal';
 
 interface TaskState {
-  email: boolean;
   agent: boolean;
   dns: boolean;
   ssl: boolean;
   security: boolean;
+  aiProvider: boolean; // Optional
 }
 
 export default function OnboardingPage() {
   const router = useRouter();
   const [state, setState] = useState<TaskState>({
-    email: false,
     agent: false,
     dns: false,
     ssl: false,
     security: false,
+    aiProvider: false, // Optional
   });
 
-  const [email, setEmail] = useState('');
-  const [emailStatus, setEmailStatus] = useState('');
-  const [isVerifyingEmail, setIsVerifyingEmail] = useState(false);
+  const [aiProviderStatus, setAiProviderStatus] = useState('');
+  const [isConfiguringAi, setIsConfiguringAi] = useState(false);
+  const [isAiModalOpen, setIsAiModalOpen] = useState(false);
 
   const [awsKey, setAwsKey] = useState('');
   const [awsSecret, setAwsSecret] = useState('');
@@ -46,7 +47,8 @@ export default function OnboardingPage() {
   const agentScript = 'curl -sSL https://agent.jetcamer.com/install.sh | bash';
 
   const updateFinishButton = () => {
-    const allDone = state.email && state.agent && state.dns && state.ssl && state.security;
+    // AI Provider is optional, so it's not required for completion
+    const allDone = state.agent && state.dns && state.ssl && state.security;
     return allDone;
   };
 
@@ -60,31 +62,33 @@ export default function OnboardingPage() {
     if (checkEl) {
       checkEl.className = 'status-icon done';
     }
-    if (statusId === 'email-status') setEmailStatus(msg);
-    else if (statusId === 'agent-status') setAgentStatus(msg);
+    if (statusId === 'agent-status') setAgentStatus(msg);
     else if (statusId === 'dns-status') setDnsStatus(msg);
     else if (statusId === 'ssl-status') setSslStatus(msg);
     else if (statusId === 'security-status') setSecurityStatus(msg);
+    else if (statusId === 'ai-provider-status') setAiProviderStatus(msg);
   };
 
-  const handleVerifyEmail = async () => {
-    if (!email || !email.includes('@')) {
-      setEmailStatus('Please enter a valid email address');
-      return;
-    }
+  const handleConfigureAiProvider = () => {
+    setIsAiModalOpen(true);
+  };
 
-    setIsVerifyingEmail(true);
-    setEmailStatus('Verifying...');
-
+  const handleAiModalClose = async () => {
+    setIsAiModalOpen(false);
+    
+    // Check if AI config was saved by trying to fetch it
     try {
-      // TODO: Implement email verification API call
-      // For now, simulate success
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      setCompleted('email', 'email-check', 'email-status', '✔ Email verified');
+      const instanceId = typeof window !== 'undefined' ? localStorage.getItem('selectedInstanceId') : null;
+      if (instanceId) {
+        // Try to fetch AI config to see if it exists
+        const config = await apiFetch<any>(`gateway/ai/config?instanceId=${encodeURIComponent(instanceId)}`);
+        if (config && config.enabled && config.baseUrl && config.model) {
+          setCompleted('aiProvider', 'ai-provider-check', 'ai-provider-status', '✔ AI Provider configured');
+        }
+      }
     } catch (error) {
-      setEmailStatus('Failed to verify email. Please try again.');
-    } finally {
-      setIsVerifyingEmail(false);
+      // Config doesn't exist or not fully configured yet, that's okay
+      console.debug('AI config not found or incomplete:', error);
     }
   };
 
@@ -280,50 +284,10 @@ export default function OnboardingPage() {
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_400px] gap-8">
         {/* Left Column: Tasks */}
         <div className="space-y-6">
-          {/* CARD: Verify Account */}
-          <div className="bg-slate-900/85 border border-slate-800 rounded-2xl p-5 flex justify-between items-start" id="task-email">
-            <div className="flex-1">
-              <h3 className="text-base font-semibold text-slate-100">1. Verify your account</h3>
-              <p className="text-xs text-slate-400 mt-1">We must verify your identity to activate server management.</p>
-
-              <div className="flex flex-col sm:flex-row gap-3 mt-3 w-full max-w-2xl">
-                <input
-                  id="email-input"
-                  type="email"
-                  placeholder="you@example.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      handleVerifyEmail();
-                    }
-                  }}
-                  className="bg-slate-950 border border-slate-700 px-3 py-2 rounded-lg text-sm text-slate-200 focus:outline-none focus:border-emerald-500 flex-1 min-w-0"
-                />
-                <button
-                  id="verify-email-btn"
-                  onClick={handleVerifyEmail}
-                  disabled={isVerifyingEmail || state.email}
-                  className="bg-emerald-500 text-slate-950 px-4 py-2 rounded-lg text-xs font-semibold hover:bg-emerald-600 transition disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {isVerifyingEmail ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Verify'}
-                </button>
-              </div>
-
-              <p id="email-status" className="text-xs text-slate-400 mt-1">
-                {emailStatus}
-              </p>
-            </div>
-            <div
-              id="email-check"
-              className={`w-[30px] h-[30px] rounded-full flex-shrink-0 ${state.email ? 'bg-emerald-500 border-2 border-emerald-700' : 'bg-slate-800 border-2 border-slate-700'}`}
-            />
-          </div>
-
           {/* CARD: Connect Server */}
           <div className="bg-slate-900/85 border border-slate-800 rounded-2xl p-5 flex justify-between items-start" id="task-agent">
             <div className="flex-1">
-              <h3 className="text-base font-semibold text-slate-100">2. Connect your server</h3>
+              <h3 className="text-base font-semibold text-slate-100">1. Connect your server</h3>
               <p className="text-xs text-slate-400 mt-1">Install the JetCamer Agent to enable hosting, SSL, logs & security.</p>
 
               <div className="relative mt-3">
@@ -360,14 +324,16 @@ export default function OnboardingPage() {
             </div>
             <div
               id="agent-check"
-              className={`w-[30px] h-[30px] rounded-full flex-shrink-0 ${state.agent ? 'bg-emerald-500 border-2 border-emerald-700' : 'bg-slate-800 border-2 border-slate-700'}`}
-            />
+              className={`w-[30px] h-[30px] rounded-full flex-shrink-0 flex items-center justify-center ${state.agent ? 'bg-emerald-500 border-2 border-emerald-700' : 'bg-slate-800 border-2 border-slate-700'}`}
+            >
+              {state.agent && <Check className="h-4 w-4 text-white" />}
+            </div>
           </div>
 
           {/* CARD: DNS Provider */}
           <div className="bg-slate-900/85 border border-slate-800 rounded-2xl p-5 flex justify-between items-start" id="task-dns">
             <div className="flex-1">
-              <h3 className="text-base font-semibold text-slate-100">3. Connect DNS (Route53)</h3>
+              <h3 className="text-base font-semibold text-slate-100">2. Connect DNS (Route53)</h3>
               <p className="text-xs text-slate-400 mt-1">Required for domain control & automatic SSL certificates.</p>
 
               <div className="flex flex-col sm:flex-row gap-3 mt-3 w-full">
@@ -410,14 +376,16 @@ export default function OnboardingPage() {
             </div>
             <div
               id="dns-check"
-              className={`w-[30px] h-[30px] rounded-full flex-shrink-0 ${state.dns ? 'bg-emerald-500 border-2 border-emerald-700' : 'bg-slate-800 border-2 border-slate-700'}`}
-            />
+              className={`w-[30px] h-[30px] rounded-full flex-shrink-0 flex items-center justify-center ${state.dns ? 'bg-emerald-500 border-2 border-emerald-700' : 'bg-slate-800 border-2 border-slate-700'}`}
+            >
+              {state.dns && <Check className="h-4 w-4 text-white" />}
+            </div>
           </div>
 
           {/* CARD: SSL Automation */}
           <div className="bg-slate-900/85 border border-slate-800 rounded-2xl p-5 flex justify-between items-start" id="task-ssl">
             <div className="flex-1">
-              <h3 className="text-base font-semibold text-slate-100">4. Validate SSL automation</h3>
+              <h3 className="text-base font-semibold text-slate-100">3. Validate SSL automation</h3>
               <p className="text-xs text-slate-400 mt-1">We must verify DNS-01 ACME challenges to issue certificates.</p>
 
               <button
@@ -441,14 +409,16 @@ export default function OnboardingPage() {
             </div>
             <div
               id="ssl-check"
-              className={`w-[30px] h-[30px] rounded-full flex-shrink-0 ${state.ssl ? 'bg-emerald-500 border-2 border-emerald-700' : 'bg-slate-800 border-2 border-slate-700'}`}
-            />
+              className={`w-[30px] h-[30px] rounded-full flex-shrink-0 flex items-center justify-center ${state.ssl ? 'bg-emerald-500 border-2 border-emerald-700' : 'bg-slate-800 border-2 border-slate-700'}`}
+            >
+              {state.ssl && <Check className="h-4 w-4 text-white" />}
+            </div>
           </div>
 
           {/* CARD: Security Engine */}
           <div className="bg-slate-900/85 border border-slate-800 rounded-2xl p-5 flex justify-between items-start" id="task-security">
             <div className="flex-1">
-              <h3 className="text-base font-semibold text-slate-100">5. Enable security engine</h3>
+              <h3 className="text-base font-semibold text-slate-100">4. Enable security engine</h3>
               <p className="text-xs text-slate-400 mt-1">Activates firewall, logs, threat scoring & automated blocking.</p>
 
               <button
@@ -472,8 +442,46 @@ export default function OnboardingPage() {
             </div>
             <div
               id="security-check"
-              className={`w-[30px] h-[30px] rounded-full flex-shrink-0 ${state.security ? 'bg-emerald-500 border-2 border-emerald-700' : 'bg-slate-800 border-2 border-slate-700'}`}
-            />
+              className={`w-[30px] h-[30px] rounded-full flex-shrink-0 flex items-center justify-center ${state.security ? 'bg-emerald-500 border-2 border-emerald-700' : 'bg-slate-800 border-2 border-slate-700'}`}
+            >
+              {state.security && <Check className="h-4 w-4 text-white" />}
+            </div>
+          </div>
+
+          {/* CARD: AI Provider (Optional) */}
+          <div className="bg-slate-900/85 border border-slate-800 rounded-2xl p-5 flex justify-between items-start opacity-75" id="task-ai-provider">
+            <div className="flex-1">
+              <div className="flex items-center gap-2">
+                <h3 className="text-base font-semibold text-slate-100">AI Provider (Optional)</h3>
+                <span className="text-xs text-slate-500 bg-slate-800 px-2 py-0.5 rounded">Optional</span>
+              </div>
+              <p className="text-xs text-slate-400 mt-1">Configure AI provider for enhanced security and automation features.</p>
+
+              <button
+                id="configure-ai-btn"
+                onClick={handleConfigureAiProvider}
+                disabled={isConfiguringAi || state.aiProvider}
+                className="bg-slate-700 text-slate-200 px-4 py-2 rounded-lg text-xs font-semibold hover:bg-slate-600 transition mt-3 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isConfiguringAi ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin inline mr-2" />
+                    Configuring...
+                  </>
+                ) : (
+                  'Configure AI Provider'
+                )}
+              </button>
+              <p id="ai-provider-status" className="text-xs text-slate-400 mt-1">
+                {aiProviderStatus}
+              </p>
+            </div>
+            <div
+              id="ai-provider-check"
+              className={`w-[30px] h-[30px] rounded-full flex-shrink-0 flex items-center justify-center ${state.aiProvider ? 'bg-emerald-500 border-2 border-emerald-700' : 'bg-slate-800 border-2 border-slate-700'}`}
+            >
+              {state.aiProvider && <Check className="h-4 w-4 text-white" />}
+            </div>
           </div>
 
           {/* Final Button */}
@@ -528,6 +536,11 @@ export default function OnboardingPage() {
         </div>
       </div>
 
+      {/* AI Config Modal */}
+      <AIConfigModal
+        isOpen={isAiModalOpen}
+        onClose={handleAiModalClose}
+      />
     </div>
   );
 }
