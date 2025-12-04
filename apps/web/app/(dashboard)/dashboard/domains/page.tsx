@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { Loader2, Plus, Trash2, Edit2, Lock, Unlock, ExternalLink } from 'lucide-react';
 import { apiFetch } from '../../../../lib/api';
+import { useDomains } from '../../../../hooks/use-domains';
 import { WebServerInstallPanel } from './_components/web-server-install-panel';
 import { AddDomainModal } from './_components/add-domain-modal';
 import { DeleteConfirmationModal } from './_components/delete-confirmation-modal';
@@ -96,9 +97,11 @@ export default function DomainsPage() {
   const [webServerUninstallProgress, setWebServerUninstallProgress] = useState<string>('');
   const webServerUninstallPollIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Domain management state
-  const [managedDomains, setManagedDomains] = useState<any[]>([]);
-  const [isLoadingDomains, setIsLoadingDomains] = useState(false);
+  // Domain management state - use shared hook
+  const { domains: managedDomains, isLoading: isLoadingDomains, refreshDomains: refreshManagedDomains } = useDomains({
+    deduplicate: true,
+    autoLoad: false, // We'll load manually after serverInfo loads
+  });
   const [isAddDomainModalOpen, setIsAddDomainModalOpen] = useState(false);
   const [, setIsCreatingDomain] = useState(false);
   
@@ -529,21 +532,9 @@ export default function DomainsPage() {
     }
   };
 
+  // Use refreshDomains from the hook instead of loadManagedDomains
   const loadManagedDomains = async () => {
-    try {
-      setIsLoadingDomains(true);
-      const instanceId = getSelectedInstanceId();
-      const url = instanceId 
-        ? `domains/domains?instanceId=${encodeURIComponent(instanceId)}`
-        : 'domains/domains';
-      const response = await apiFetch<{ domains: any[] }>(url);
-      setManagedDomains(response.domains || []);
-    } catch (err) {
-      console.error('Failed to load managed domains', err);
-      setManagedDomains([]);
-    } finally {
-      setIsLoadingDomains(false);
-    }
+    await refreshManagedDomains();
   };
 
   const createDomain = async (input: { domain: string; documentRoot?: string; sslEnabled?: boolean }): Promise<void> => {

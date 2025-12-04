@@ -14,6 +14,12 @@ import {
   HardDrive,
   Activity,
   Lock,
+  Users,
+  Package,
+  CheckCircle2,
+  Palette,
+  Globe2,
+  Brain,
 } from 'lucide-react';
 
 import type { ServerSettings } from '@hosting/common';
@@ -22,24 +28,31 @@ import { ServerSettingsModal } from '../../../components/server-settings-modal';
 import { AuthGuard } from '../../../components/auth-guard';
 import { AwsCredentialsGuard } from './_components/aws-credentials-guard';
 import { ApiEndpointBanner } from '../../../components/api-endpoint-banner';
+import { AIConfigModal } from './security/_components/ai-config-modal';
 
 const navLinks = [
   { href: '/dashboard', label: 'Overview', icon: LayoutDashboard },
   { href: '/dashboard/analytics', label: 'Analytics', icon: BarChart3 },
   { href: '/dashboard/security', label: 'Security', icon: Shield },
+  { href: '/dashboard/accounts', label: 'Accounts', icon: Users },
   { href: '/dashboard/databases', label: 'Databases', icon: Database },
   { href: '/dashboard/firewall', label: 'Firewall', icon: Network },
   { href: '/dashboard/billing', label: 'Billing', icon: CreditCard },
   { href: '/dashboard/email', label: 'Email (SES)', icon: Mail },
   { href: '/dashboard/email-providers', label: 'Email Providers', icon: Mail },
   { href: '/dashboard/domains', label: 'Websites', icon: Globe },
+  { href: '/dashboard/dns', label: 'DNS Management', icon: Globe2 },
   { href: '/dashboard/ssl', label: 'SSL Certificates', icon: Lock },
   { href: '/dashboard/backups', label: 'Backups', icon: HardDrive },
   { href: '/dashboard/monitoring', label: 'Monitoring', icon: Activity },
+  { href: '/dashboard/shipping', label: 'Shipping', icon: Package },
+  { href: '/dashboard/themes-and-apps', label: 'Themes & Apps', icon: Palette },
+  { href: '/dashboard/system-status', label: 'System Status', icon: CheckCircle2 },
 ];
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
   const [isAwsSettingsOpen, setIsAwsSettingsOpen] = useState(false);
+  const [isAiSettingsOpen, setIsAiSettingsOpen] = useState(false);
   const [serverSettings, setServerSettings] = useState<ServerSettings | null>(null);
 
   const loadServerSettings = async () => {
@@ -108,6 +121,14 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                 >
                   AWS Settings
                 </button>
+                <button
+                  type="button"
+                  onClick={() => setIsAiSettingsOpen(true)}
+                  className="w-full rounded-md border border-slate-700 px-3 py-2 text-sm font-semibold text-slate-300 transition hover:border-slate-500 hover:bg-slate-800/60 hover:text-white flex items-center justify-center gap-2"
+                >
+                  <Brain className="h-4 w-4" />
+                  AI Providers
+                </button>
                 <div className="rounded-md border border-slate-800 bg-slate-800/50 p-4 text-xs text-slate-400">
                   AWS Region: <span className="font-medium text-slate-200">{serverSettings?.awsRegion ?? 'us-east-1'}</span>
                 </div>
@@ -123,6 +144,10 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
         onClose={() => setIsAwsSettingsOpen(false)}
         initialSettings={serverSettings}
         onSaved={handleServerSettingsSaved}
+      />
+      <AIConfigModal
+        isOpen={isAiSettingsOpen}
+        onClose={() => setIsAiSettingsOpen(false)}
       />
       </AwsCredentialsGuard>
     </AuthGuard>
