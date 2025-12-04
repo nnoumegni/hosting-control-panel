@@ -877,14 +877,14 @@ export default function DomainsPage() {
   }, []);
 
   useEffect(() => {
-    if (selectedDomain) {
+    if (selectedDomain && selectedDomain.trim() && isValidDomainName(selectedDomain)) {
       void loadDnsRecords();
       void loadSslCertificates();
     }
   }, [selectedDomain]);
 
   const loadDnsRecords = async () => {
-    if (!selectedDomain) return;
+    if (!selectedDomain || !selectedDomain.trim() || !isValidDomainName(selectedDomain)) return;
     try {
       setIsLoadingDns(true);
       setDnsError(null);
@@ -1018,15 +1018,17 @@ export default function DomainsPage() {
   }
 
   // Find current domain from either serverInfo.domains or managedDomains
-  const currentDomain = serverInfo.domains.find((d) => d.domain === selectedDomain) 
-    || managedDomains.find((d) => d.domain === selectedDomain)
-    || (selectedDomain ? {
-        domain: selectedDomain,
-        serverBlock: selectedDomain,
-        documentRoot: undefined,
-        sslEnabled: false,
-        configPath: '',
-      } : null);
+  const currentDomain = selectedDomain && selectedDomain.trim() && isValidDomainName(selectedDomain)
+    ? (serverInfo.domains.find((d) => d.domain === selectedDomain) 
+      || managedDomains.find((d) => d.domain === selectedDomain)
+      || {
+          domain: selectedDomain,
+          serverBlock: selectedDomain,
+          documentRoot: undefined,
+          sslEnabled: false,
+          configPath: '',
+        })
+    : null;
 
   return (
     <div className="space-y-8">
