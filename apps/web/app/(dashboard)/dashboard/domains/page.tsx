@@ -98,6 +98,11 @@ export default function DomainsPage() {
   const [hasInstanceId, setHasInstanceId] = useState<boolean | null>(null); // null = checking, true = has it, false = doesn't have it
   const isInitializingRef = useRef(false);
   const [showCertificateWizard, setShowCertificateWizard] = useState(false);
+  const [sidebarTab, setSidebarTab] = useState<'websites' | 'hosted-zones'>('websites');
+  const [hostedZones, setHostedZones] = useState<Array<{ id: string; name: string; recordCount: number; privateZone: boolean }>>([]);
+  const [isLoadingHostedZones, setIsLoadingHostedZones] = useState(false);
+  const [hostedZonesError, setHostedZonesError] = useState<string | null>(null);
+  const [hostedZonesLoaded, setHostedZonesLoaded] = useState(false);
   
   // Selected instance ID state (for hooks that need it)
   const [selectedInstanceId, setSelectedInstanceId] = useState<string | null>(() => {
@@ -562,6 +567,10 @@ export default function DomainsPage() {
       }
       // Also load managed domains
       void loadManagedDomains();
+      // Preload hosted zones in the background (they don't depend on serverInfo)
+      if (!hostedZonesLoaded) {
+        void loadHostedZones();
+      }
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to load server information';
       setError(message);
@@ -885,6 +894,14 @@ export default function DomainsPage() {
     }
   }, [selectedDomain]);
 
+  // Load hosted zones when switching to hosted zones tab if not already loaded
+  // (They are preloaded after serverInfo loads, but this ensures they load if user switches before serverInfo completes)
+  useEffect(() => {
+    if (sidebarTab === 'hosted-zones' && !hostedZonesLoaded && !isLoadingHostedZones) {
+      void loadHostedZones();
+    }
+  }, [sidebarTab, hostedZonesLoaded, isLoadingHostedZones]);
+
   const loadDnsRecords = async () => {
     if (!selectedDomain || !selectedDomain.trim() || !isValidDomainName(selectedDomain)) return;
     try {
@@ -898,6 +915,25 @@ export default function DomainsPage() {
       setDnsRecords(null);
     } finally {
       setIsLoadingDns(false);
+    }
+  };
+
+  const loadHostedZones = async () => {
+    try {
+      setIsLoadingHostedZones(true);
+      setHostedZonesError(null);
+      const response = await apiFetch<{ zones: Array<{ id: string; name: string; recordCount: number; privateZone: boolean }> }>(
+        'domains/dns/zones'
+      );
+      setHostedZones(response.zones || []);
+      setHostedZonesLoaded(true); // Mark as loaded after successful fetch
+    } catch (err: any) {
+      const message = err instanceof Error ? err.message : 'Failed to load hosted zones';
+      setHostedZonesError(message);
+      setHostedZones([]);
+      // Don't set hostedZonesLoaded to true on error, so it can retry
+    } finally {
+      setIsLoadingHostedZones(false);
     }
   };
 
@@ -1118,19 +1154,46 @@ export default function DomainsPage() {
       <div className="grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-6">
         {/* Domain Sidebar */}
         <aside className="bg-slate-900/60 rounded-xl border border-slate-800 p-4">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xs font-semibold text-slate-400 uppercase px-2">Hosted Websites</h2>
+          {/* Tabs */}
+          <div className="flex items-center gap-2 mb-4 border-b border-slate-800">
             <button
-              onClick={() => setIsAddDomainModalOpen(true)}
-              className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded transition-colors"
-              title="Add website"
+              onClick={() => setSidebarTab('websites')}
+              className={`px-3 py-2 text-xs font-semibold transition ${
+                sidebarTab === 'websites'
+                  ? 'text-white border-b-2 border-emerald-500'
+                  : 'text-slate-400 hover:text-slate-300'
+              }`}
+            >
+              Websites
+            </button>
+            <button
+              onClick={() => setSidebarTab('hosted-zones')}
+              className={`px-3 py-2 text-xs font-semibold transition ${
+                sidebarTab === 'hosted-zones'
+                  ? 'text-white border-b-2 border-emerald-500'
+                  : 'text-slate-400 hover:text-slate-300'
+              }`}
+            >
+              Hosted Zones
+            </button>
+            <button
+              onClick={() => {
+                if (sidebarTab === 'websites') {
+                  setIsAddDomainModalOpen(true);
+                } else {
+                  // TODO: Open add hosted zone modal
+                  setIsAddDomainModalOpen(true); // For now, use same modal
+                }
+              }}
+              className="ml-auto p-1.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded transition-colors"
+              title={sidebarTab === 'websites' ? 'Add website' : 'Add hosted zone'}
             >
               <Plus className="h-4 w-4" />
             </button>
           </div>
           
-          {/* Merge managed domains with detected domains from server config */}
-          {(() => {
+          {/* Websites Tab Content */}
+          {sidebarTab === 'websites' && (() => {
             // Convert managed domains to the format expected by the simple list
             // Filter to only include valid domain names
             const managedDomainNames = filterValidDomains(managedDomains.map(d => d.domain));
@@ -1246,39 +1309,89 @@ export default function DomainsPage() {
             }
           })()}
           
-          {/* Web Server Panel */}
-          <div className="mt-6 pt-4 border-t border-slate-800">
-            <WebServerInstallPanel
-              webServerType={serverInfo.webServer.type}
-              webServerVersion={serverInfo.webServer.version}
-              isWebServerRunning={serverInfo.webServer.isRunning}
-              onInstall={installWebServer}
-              onUninstall={uninstallWebServer}
-              isInstalling={isInstallingWebServer}
-              isUninstalling={isUninstallingWebServer}
-              installationProgress={webServerInstallProgress}
-              uninstallationProgress={webServerUninstallProgress}
-            />
-          </div>
+          {/* Hosted Zones Tab Content */}
+          {sidebarTab === 'hosted-zones' && (
+            <>
+              {isLoadingHostedZones ? (
+                <div className="flex items-center justify-center py-4">
+                  <Loader2 className="h-5 w-5 animate-spin text-slate-400" />
+                </div>
+              ) : hostedZonesError ? (
+                <div className="text-center py-4 text-slate-400 text-sm">
+                  <p className="text-rose-400">{hostedZonesError}</p>
+                </div>
+              ) : hostedZones.length === 0 ? (
+                <div className="text-center py-4 text-slate-400 text-sm">
+                  <p>No hosted zones found.</p>
+                  <p className="text-xs mt-1">Add a hosted zone to get started!</p>
+                </div>
+              ) : (
+                <ul className="space-y-1 max-h-[400px] overflow-auto">
+                  {hostedZones.map((zone) => (
+                    <li
+                      key={zone.id}
+                      onClick={() => {
+                        setSelectedDomain(zone.name);
+                        setShowDnsLookupForm(false);
+                        setActiveTab('info');
+                      }}
+                      className={`px-2 py-2 rounded-md hover:bg-slate-800 cursor-pointer transition text-sm flex items-center justify-between gap-2 ${
+                        selectedDomain === zone.name
+                          ? 'bg-slate-800 text-white font-medium'
+                          : 'text-slate-300'
+                      }`}
+                    >
+                      <div className="truncate min-w-0 flex-1">
+                        <div className="font-medium">{zone.name}</div>
+                        <div className="text-xs text-slate-500">
+                          {zone.recordCount} record{zone.recordCount !== 1 ? 's' : ''}
+                          {zone.privateZone && ' • Private'}
+                        </div>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </>
+          )}
           
-          <div className="mt-6 pt-4 border-t border-slate-800 text-xs text-slate-400 space-y-1">
-            <p>
-              Instance: <span className="text-slate-200">{serverInfo.instanceId}</span>
-            </p>
-            <div>
-              <p className="text-slate-400">Server:</p>
-              <p className="text-slate-200">
-                {serverInfo.webServer.type === 'none'
-                  ? 'Not detected'
-                  : `${serverInfo.webServer.type} ${serverInfo.webServer.version ?? ''}`}
-            </p>
-            </div>
-            {serverInfo.publicIp && (
-              <p>
-                IP: <span className="text-slate-200">{serverInfo.publicIp}</span>
-              </p>
-            )}
-          </div>
+          {/* Web Server Panel - Only show on Websites tab */}
+          {sidebarTab === 'websites' && serverInfo && (
+            <>
+              <div className="mt-6 pt-4 border-t border-slate-800">
+                <WebServerInstallPanel
+                  webServerType={serverInfo.webServer.type}
+                  webServerVersion={serverInfo.webServer.version}
+                  isWebServerRunning={serverInfo.webServer.isRunning}
+                  onInstall={installWebServer}
+                  onUninstall={uninstallWebServer}
+                  isInstalling={isInstallingWebServer}
+                  isUninstalling={isUninstallingWebServer}
+                  installationProgress={webServerInstallProgress}
+                  uninstallationProgress={webServerUninstallProgress}
+                />
+              </div>
+              
+              <div className="mt-6 pt-4 border-t border-slate-800 text-xs text-slate-400 space-y-1">
+                <p>
+                  Instance: <span className="text-slate-200">{serverInfo.instanceId}</span>
+                </p>
+                <div>
+                  <p className="text-slate-400">Server:</p>
+                  <p className="text-slate-200">
+                    {serverInfo.webServer.type === 'none'
+                      ? 'Not detected'
+                      : `${serverInfo.webServer.type} ${serverInfo.webServer.version ?? ''}`}
+                  </p>
+                </div>
+                {serverInfo.publicIp && (
+                  <p>
+                    IP: <span className="text-slate-200">{serverInfo.publicIp}</span>
+                  </p>
+                )}
+              </div>
+            </>
+          )}
         </aside>
 
         {/* Main Panel */}
@@ -1342,9 +1455,19 @@ export default function DomainsPage() {
               )}
             </div>
             {!showDnsLookupForm && (
-              <span className="text-slate-500 text-sm">
-                Manage website
-              </span>
+              <button
+                onClick={() => {
+                  if (sidebarTab === 'websites') {
+                    setIsAddDomainModalOpen(true);
+                  } else {
+                    // TODO: Open add hosted zone modal
+                    setIsAddDomainModalOpen(true); // For now, use same modal
+                  }
+                }}
+                className="text-slate-500 text-sm hover:text-emerald-400 transition-colors"
+              >
+                {sidebarTab === 'websites' ? 'Add website' : 'Add hosted zone'}
+              </button>
             )}
           </header>
 
