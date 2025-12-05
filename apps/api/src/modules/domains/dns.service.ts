@@ -180,10 +180,48 @@ export class DnsService {
     try {
       const client = await this.buildRoute53Client();
 
-      // Ensure name ends with dot for Route53
-      const recordName = record.name.endsWith('.') ? record.name : `${record.name}.`;
-
       const formattedZoneId = zoneId.startsWith('/hostedzone/') ? zoneId : `/hostedzone/${zoneId}`;
+      
+      // Get the hosted zone to determine the zone name
+      const zoneResponse = await client.send(
+        new GetHostedZoneCommand({
+          Id: formattedZoneId,
+        }),
+      );
+
+      const zoneName = zoneResponse.HostedZone?.Name?.replace(/\.$/, '') || '';
+      
+      if (!zoneName) {
+        throw new Error('Could not determine zone name from hosted zone');
+      }
+      
+      // Format record name: if it's empty or '@', use zone root
+      // If it doesn't end with the zone name, append it
+      let recordName = record.name.trim();
+      
+      if (!recordName || recordName === '@') {
+        // Use zone root
+        recordName = zoneName;
+      } else {
+        // Remove trailing dot if present for processing
+        const nameWithoutDot = recordName.endsWith('.') ? recordName.slice(0, -1) : recordName;
+        const zoneNameLower = zoneName.toLowerCase();
+        const nameLower = nameWithoutDot.toLowerCase();
+        
+        // Check if the name already includes the zone name
+        if (nameLower === zoneNameLower || nameLower.endsWith(`.${zoneNameLower}`)) {
+          // Already fully qualified or relative to this zone
+          recordName = nameWithoutDot;
+        } else {
+          // It's a subdomain or relative name - append zone name
+          recordName = `${nameWithoutDot}.${zoneName}`;
+        }
+      }
+      
+      // Ensure name ends with dot for Route53 (FQDN requirement)
+      if (!recordName.endsWith('.')) {
+        recordName = `${recordName}.`;
+      }
       
       await client.send(
         new ChangeResourceRecordSetsCommand({
@@ -204,9 +242,16 @@ export class DnsService {
         }),
       );
 
-      logger.info({ zoneId, record }, 'DNS record upserted');
-    } catch (error) {
-      logger.error({ err: error, zoneId, record }, 'Failed to upsert DNS record');
+      logger.info({ zoneId, record, recordName }, 'DNS record upserted');
+    } catch (error: any) {
+      logger.error({ err: error, zoneId, record, errorMessage: error?.message }, 'Failed to upsert DNS record');
+      // Provide more user-friendly error messages
+      if (error.name === 'InvalidInput' || error.Code === 'InvalidInput') {
+        throw new Error(`Invalid DNS record: ${error.message || 'Invalid input provided'}`);
+      }
+      if (error.name === 'NoSuchHostedZone' || error.Code === 'NoSuchHostedZone') {
+        throw new Error(`Hosted zone not found: ${zoneId}`);
+      }
       throw error;
     }
   }
@@ -295,25 +340,114 @@ export class DnsService {
 
   /**
    * Delete a hosted zone
+   * This will automatically delete all DNS records (except NS and SOA) before deleting the zone
    */
   async deleteHostedZone(zoneId: string): Promise<void> {
     try {
       const client = await this.buildRoute53Client();
       const formattedZoneId = zoneId.startsWith('/hostedzone/') ? zoneId : `/hostedzone/${zoneId}`;
 
+      // 1. List ALL records in the zone (with pagination)
+      const allRecords: any[] = [];
+      let nextRecord: { name?: string; type?: string } | null = null;
+
+      do {
+        const listParams: any = {
+          HostedZoneId: formattedZoneId,
+        };
+
+        if (nextRecord?.name && nextRecord?.type) {
+          listParams.StartRecordName = nextRecord.name;
+          listParams.StartRecordType = nextRecord.type;
+        }
+
+        const listResponse = await client.send(
+          new ListResourceRecordSetsCommand(listParams),
+        );
+
+        if (listResponse.ResourceRecordSets) {
+          allRecords.push(...listResponse.ResourceRecordSets);
+        }
+
+        if (listResponse.IsTruncated) {
+          nextRecord = {
+            name: listResponse.NextRecordName,
+            type: listResponse.NextRecordType,
+          };
+        } else {
+          nextRecord = null;
+        }
+      } while (nextRecord);
+
+      // 2. Exclude NS and SOA (AWS requires them kept)
+      const recordsToDelete = allRecords.filter(
+        (rec) => rec.Type && !['NS', 'SOA'].includes(rec.Type),
+      );
+
+      logger.info(
+        { zoneId, totalRecords: allRecords.length, recordsToDelete: recordsToDelete.length },
+        'Preparing to delete hosted zone with records',
+      );
+
+      // 3. Batch delete in chunks of 1000 (AWS limit per ChangeBatch)
+      if (recordsToDelete.length > 0) {
+        const batches: any[][] = [];
+        for (let i = 0; i < recordsToDelete.length; i += 1000) {
+          batches.push(recordsToDelete.slice(i, i + 1000));
+        }
+
+        // 4. Execute batches
+        for (let batchIndex = 0; batchIndex < batches.length; batchIndex++) {
+          const batch = batches[batchIndex];
+          logger.info(
+            { zoneId, batchIndex: batchIndex + 1, totalBatches: batches.length, batchSize: batch.length },
+            'Deleting batch of DNS records',
+          );
+
+          await client.send(
+            new ChangeResourceRecordSetsCommand({
+              HostedZoneId: formattedZoneId,
+              ChangeBatch: {
+                Changes: batch.map((rec) => ({
+                  Action: 'DELETE',
+                  ResourceRecordSet: {
+                    Name: rec.Name,
+                    Type: rec.Type,
+                    TTL: rec.TTL,
+                    ResourceRecords: rec.ResourceRecords,
+                    // Include other properties that might be present
+                    ...(rec.SetIdentifier && { SetIdentifier: rec.SetIdentifier }),
+                    ...(rec.Weight && { Weight: rec.Weight }),
+                    ...(rec.Region && { Region: rec.Region }),
+                    ...(rec.Failover && { Failover: rec.Failover }),
+                    ...(rec.MultiValueAnswer !== undefined && { MultiValueAnswer: rec.MultiValueAnswer }),
+                    ...(rec.GeoLocation && { GeoLocation: rec.GeoLocation }),
+                    ...(rec.HealthCheckId && { HealthCheckId: rec.HealthCheckId }),
+                    ...(rec.TrafficPolicyInstanceId && { TrafficPolicyInstanceId: rec.TrafficPolicyInstanceId }),
+                  },
+                })),
+              },
+            }),
+          );
+        }
+
+        logger.info({ zoneId, deletedRecords: recordsToDelete.length }, 'All DNS records deleted');
+      }
+
+      // 5. Delete the hosted zone
       await client.send(
         new DeleteHostedZoneCommand({
           Id: formattedZoneId,
         }),
       );
 
-      logger.info({ zoneId }, 'Hosted zone deleted');
+      logger.info({ zoneId }, 'Hosted zone deleted successfully');
     } catch (error: any) {
-      logger.error({ err: error, zoneId }, 'Failed to delete hosted zone');
+      logger.error({ err: error, zoneId, errorName: error.name, errorCode: error.Code }, 'Failed to delete hosted zone');
       
       // Provide more user-friendly error messages
       if (error.name === 'HostedZoneNotEmpty' || error.Code === 'HostedZoneNotEmpty') {
-        throw new Error('Cannot delete hosted zone: The hosted zone contains records that must be deleted first. Please delete all DNS records (except NS and SOA) before deleting the hosted zone.');
+        throw new Error('Cannot delete hosted zone: The hosted zone still contains records that could not be deleted. Please try again or delete records manually.');
       }
       if (error.name === 'InvalidInput' || error.Code === 'InvalidInput') {
         throw new Error(`Invalid hosted zone ID: ${zoneId}`);

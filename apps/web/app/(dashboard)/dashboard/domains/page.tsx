@@ -12,6 +12,7 @@ import { DNSLookupPanel } from '../dns/_components/dns-lookup-panel';
 import { WebServerInstallPanel } from './_components/web-server-install-panel';
 import { AddDomainModal } from './_components/add-domain-modal';
 import { DeleteConfirmationModal } from './_components/delete-confirmation-modal';
+import { AddDnsRecordModal } from './_components/add-dns-record-modal';
 import { FtpAccountsPanel } from './_components/ftp-accounts-panel';
 import { CertificateWizard } from '../ssl/_components/certificate-wizard';
 
@@ -111,6 +112,9 @@ export default function DomainsPage() {
   const [hostedZoneToDelete, setHostedZoneToDelete] = useState<{ id: string; name: string } | null>(null);
   const [deleteHostedZoneModalOpen, setDeleteHostedZoneModalOpen] = useState(false);
   const [deleteHostedZoneError, setDeleteHostedZoneError] = useState<string | null>(null);
+  const [isAddDnsRecordModalOpen, setIsAddDnsRecordModalOpen] = useState(false);
+  const [dnsRecordToDelete, setDnsRecordToDelete] = useState<{ name: string; type: string } | null>(null);
+  const [deleteDnsRecordModalOpen, setDeleteDnsRecordModalOpen] = useState(false);
   
   // Selected instance ID state (for hooks that need it)
   const [selectedInstanceId, setSelectedInstanceId] = useState<string | null>(() => {
@@ -669,6 +673,38 @@ export default function DomainsPage() {
     }
   };
 
+  const deleteDnsRecord = async () => {
+    if (!dnsRecordToDelete || !selectedHostedZone) return;
+
+    try {
+      await apiFetch(
+        `domains/dns/zones/${selectedHostedZone.id}/records/${encodeURIComponent(dnsRecordToDelete.name)}/${dnsRecordToDelete.type}`,
+        {
+          method: 'DELETE',
+        }
+      );
+
+      // Reload hosted zone records
+      if (selectedHostedZone) {
+        void loadHostedZoneRecords(selectedHostedZone.id);
+      }
+
+      setDeleteDnsRecordModalOpen(false);
+      setDnsRecordToDelete(null);
+    } catch (err: any) {
+      const message = err?.response?.data?.error || err?.message || 'Failed to delete DNS record';
+      setError(message);
+      console.error('Failed to delete DNS record', err);
+    }
+  };
+
+  const handleAddDnsRecordSuccess = () => {
+    // Reload hosted zone records after adding
+    if (selectedHostedZone) {
+      void loadHostedZoneRecords(selectedHostedZone.id);
+    }
+  };
+
   const deleteDomain = async () => {
     if (!domainToDelete) return;
 
@@ -999,6 +1035,20 @@ export default function DomainsPage() {
       // Don't set hostedZonesLoaded to true on error, so it can retry
     } finally {
       setIsLoadingHostedZones(false);
+    }
+  };
+
+  const loadHostedZoneRecords = async (zoneId: string) => {
+    if (!selectedHostedZone) return;
+    try {
+      setIsLoadingHostedZoneDetails(true);
+      const recordsResponse = await apiFetch<ZoneRecords>(`domains/dns/records/${selectedHostedZone.name}`);
+      setHostedZoneRecords(recordsResponse);
+    } catch (err: any) {
+      console.error('Failed to reload hosted zone records', err);
+      // Don't set error state here, just log it
+    } finally {
+      setIsLoadingHostedZoneDetails(false);
     }
   };
 
@@ -1640,7 +1690,7 @@ export default function DomainsPage() {
                           {/* Left: Name Servers */}
                           <div>
                             <span className="text-xs font-medium text-slate-400 uppercase">Name Servers</span>
-                            {hostedZoneDetails.nameServers.length > 0 ? (
+                            {hostedZoneDetails.nameServers && hostedZoneDetails.nameServers.length > 0 ? (
                               <ul className="mt-2 space-y-1.5">
                                 {hostedZoneDetails.nameServers.map((ns: string, idx: number) => (
                                   <li key={idx} className="text-sm text-slate-200 font-mono bg-slate-800/50 px-2 py-1 rounded">
@@ -1744,9 +1794,7 @@ export default function DomainsPage() {
                           <h3 className="text-lg font-semibold text-white">DNS Records</h3>
                           <button
                             className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-sm rounded transition"
-                            onClick={() => {
-                              // TODO: Open add DNS record modal
-                            }}
+                            onClick={() => setIsAddDnsRecordModalOpen(true)}
                           >
                             <Plus className="h-4 w-4 inline mr-1" />
                             Add Record
@@ -1777,7 +1825,8 @@ export default function DomainsPage() {
                                       <button
                                         className="text-slate-400 hover:text-red-400 transition"
                                         onClick={() => {
-                                          // TODO: Delete DNS record
+                                          setDnsRecordToDelete({ name: record.name, type: record.type });
+                                          setDeleteDnsRecordModalOpen(true);
                                         }}
                                         title="Delete record"
                                       >
@@ -1797,7 +1846,12 @@ export default function DomainsPage() {
                         )}
                       </div>
                     </div>
-                  ) : null}
+                  ) : (
+                    <div className="text-center py-12 text-slate-400">
+                      <p className="text-lg mb-2">No hosted zone details available</p>
+                      <p className="text-sm">Unable to load details for this hosted zone</p>
+                    </div>
+                  )}
               </section>
             </>
           ) : currentDomain ? (
@@ -2209,8 +2263,14 @@ export default function DomainsPage() {
           ) : (
             <section className="p-6 flex-1 flex items-center justify-center">
               <div className="text-center text-slate-400">
-                <p className="text-lg mb-2">No website selected</p>
-                <p className="text-sm">Select a website from the sidebar to view details</p>
+                <p className="text-lg mb-2">
+                  {sidebarTab === 'websites' ? 'No website selected' : 'No hosted zone selected'}
+                </p>
+                <p className="text-sm">
+                  {sidebarTab === 'websites'
+                    ? 'Select a website from the sidebar to view details'
+                    : 'Select a hosted zone from the sidebar to view details'}
+                </p>
               </div>
             </section>
           )}
@@ -2261,6 +2321,32 @@ export default function DomainsPage() {
         itemName={hostedZoneToDelete?.name}
         requireTypeToConfirm={true}
         error={deleteHostedZoneError}
+      />
+      {selectedHostedZone && (
+        <AddDnsRecordModal
+          isOpen={isAddDnsRecordModalOpen}
+          onClose={() => setIsAddDnsRecordModalOpen(false)}
+          onSuccess={handleAddDnsRecordSuccess}
+          zoneId={selectedHostedZone.id}
+          zoneName={selectedHostedZone.name}
+        />
+      )}
+      <DeleteConfirmationModal
+        isOpen={deleteDnsRecordModalOpen}
+        onClose={() => {
+          setDeleteDnsRecordModalOpen(false);
+          setDnsRecordToDelete(null);
+        }}
+        onConfirm={deleteDnsRecord}
+        title="Delete DNS Record"
+        message={
+          dnsRecordToDelete
+            ? `Are you sure you want to delete the DNS record ${dnsRecordToDelete.name} (${dnsRecordToDelete.type})? This action cannot be undone.`
+            : 'Are you sure you want to delete this DNS record?'
+        }
+        confirmText="Delete Record"
+        itemName={dnsRecordToDelete ? `${dnsRecordToDelete.name} (${dnsRecordToDelete.type})` : undefined}
+        requireTypeToConfirm={false}
       />
       {selectedInstanceId && (
         <CertificateWizard

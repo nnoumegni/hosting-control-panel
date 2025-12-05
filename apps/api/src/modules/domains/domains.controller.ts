@@ -70,9 +70,21 @@ export const createDomainsController = (
       res.json({ success: true, message: 'Hosted zone deleted successfully' });
     } catch (error: any) {
       // Forward the error message from the service
-      const statusCode = error.name === 'NoSuchHostedZone' || error.message?.includes('not found') ? 404 : 400;
+      // Determine appropriate status code
+      let statusCode = 500;
+      if (error.name === 'NoSuchHostedZone' || error.Code === 'NoSuchHostedZone' || error.message?.includes('not found')) {
+        statusCode = 404;
+      } else if (error.name === 'InvalidInput' || error.Code === 'InvalidInput' || error.message?.includes('Invalid')) {
+        statusCode = 400;
+      } else if (error.name === 'HostedZoneNotEmpty' || error.Code === 'HostedZoneNotEmpty') {
+        statusCode = 400;
+      }
+      
+      // Extract error message - prefer the error message from the service
+      const errorMessage = error.message || error.Message || 'Failed to delete hosted zone';
+      
       res.status(statusCode).json({ 
-        error: error.message || 'Failed to delete hosted zone',
+        error: errorMessage,
         success: false 
       });
     }
