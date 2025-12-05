@@ -108,6 +108,8 @@ export default function DomainsPage() {
   const [hostedZoneRecords, setHostedZoneRecords] = useState<ZoneRecords | null>(null);
   const [isLoadingHostedZoneDetails, setIsLoadingHostedZoneDetails] = useState(false);
   const [hostedZoneDetailsError, setHostedZoneDetailsError] = useState<string | null>(null);
+  const [hostedZoneToDelete, setHostedZoneToDelete] = useState<{ id: string; name: string } | null>(null);
+  const [deleteHostedZoneModalOpen, setDeleteHostedZoneModalOpen] = useState(false);
   
   // Selected instance ID state (for hooks that need it)
   const [selectedInstanceId, setSelectedInstanceId] = useState<string | null>(() => {
@@ -617,6 +619,38 @@ export default function DomainsPage() {
   const handleDeleteDomainClick = (id: string, name: string) => {
     setDomainToDelete({ id, name });
     setDeleteModalOpen(true);
+  };
+
+  const handleDeleteHostedZoneClick = (id: string, name: string) => {
+    setHostedZoneToDelete({ id, name });
+    setDeleteHostedZoneModalOpen(true);
+  };
+
+  const deleteHostedZone = async () => {
+    if (!hostedZoneToDelete) return;
+
+    try {
+      await apiFetch(`domains/dns/zones/${hostedZoneToDelete.id}`, {
+        method: 'DELETE',
+      });
+      
+      // Remove from local state
+      setHostedZones(hostedZones.filter(z => z.id !== hostedZoneToDelete.id));
+      
+      // Clear selection if deleted zone was selected
+      if (selectedHostedZone?.id === hostedZoneToDelete.id) {
+        setSelectedHostedZone(null);
+        setHostedZoneDetails(null);
+        setHostedZoneRecords(null);
+      }
+      
+      setDeleteHostedZoneModalOpen(false);
+      setHostedZoneToDelete(null);
+    } catch (err: any) {
+      const message = err instanceof Error ? err.message : 'Failed to delete hosted zone';
+      setError(message);
+      console.error('Failed to delete hosted zone', err);
+    }
   };
 
   const deleteDomain = async () => {
@@ -1381,24 +1415,36 @@ export default function DomainsPage() {
                   {hostedZones.map((zone) => (
                     <li
                       key={zone.id}
-                      onClick={() => {
-                        setSelectedHostedZone({ id: zone.id, name: zone.name });
-                        setSelectedDomain(null);
-                        setShowDnsLookupForm(false);
-                      }}
-                      className={`px-2 py-2 rounded-md hover:bg-slate-800 cursor-pointer transition text-sm flex items-center justify-between gap-2 ${
+                      className={`px-2 py-2 rounded-md hover:bg-slate-800 transition text-sm flex items-center justify-between gap-2 ${
                         selectedHostedZone?.id === zone.id
                           ? 'bg-slate-800 text-white font-medium'
                           : 'text-slate-300'
                       }`}
                     >
-                      <div className="truncate min-w-0 flex-1">
+                      <div
+                        onClick={() => {
+                          setSelectedHostedZone({ id: zone.id, name: zone.name });
+                          setSelectedDomain(null);
+                          setShowDnsLookupForm(false);
+                        }}
+                        className="truncate min-w-0 flex-1 cursor-pointer"
+                      >
                         <div className="font-medium">{zone.name}</div>
                         <div className="text-xs text-slate-500">
                           {zone.recordCount} record{zone.recordCount !== 1 ? 's' : ''}
                           {zone.privateZone && ' • Private'}
                         </div>
                       </div>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteHostedZoneClick(zone.id, zone.name);
+                        }}
+                        className="p-1 text-slate-400 hover:text-red-400 hover:bg-red-500/10 rounded transition flex-shrink-0"
+                        title="Delete hosted zone"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
                     </li>
                   ))}
                 </ul>
@@ -1572,35 +1618,107 @@ export default function DomainsPage() {
                     </div>
                   ) : hostedZoneDetails ? (
                     <div className="space-y-6">
-                      {/* Zone Information */}
+                      {/* Name Servers and Linked Servers */}
                       <div className="bg-slate-900/60 rounded-xl border border-slate-800 p-6">
-                        <h3 className="text-lg font-semibold text-white mb-4">Zone Information</h3>
-                        <div className="space-y-3">
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                          {/* Left: Name Servers */}
                           <div>
-                            <span className="text-xs font-medium text-slate-400 uppercase">Zone Name</span>
-                            <p className="text-sm text-slate-200 mt-1">{hostedZoneDetails.name}</p>
-                          </div>
-                          <div>
-                            <span className="text-xs font-medium text-slate-400 uppercase">Zone ID</span>
-                            <p className="text-sm text-slate-200 mt-1 font-mono">{hostedZoneDetails.zoneId}</p>
-                          </div>
-                          {hostedZoneDetails.nameServers.length > 0 && (
-                            <div>
-                              <span className="text-xs font-medium text-slate-400 uppercase">Name Servers</span>
-                              <ul className="mt-1 space-y-1">
-                                {hostedZoneDetails.nameServers.map((ns, idx) => (
-                                  <li key={idx} className="text-sm text-slate-200 font-mono">{ns}</li>
+                            <span className="text-xs font-medium text-slate-400 uppercase">Name Servers</span>
+                            {hostedZoneDetails.nameServers.length > 0 ? (
+                              <ul className="mt-2 space-y-1.5">
+                                {hostedZoneDetails.nameServers.map((ns: string, idx: number) => (
+                                  <li key={idx} className="text-sm text-slate-200 font-mono bg-slate-800/50 px-2 py-1 rounded">
+                                    {ns}
+                                  </li>
                                 ))}
                               </ul>
-                            </div>
-                          )}
-                          {hostedZones.find(z => z.id === selectedHostedZone.id)?.privateZone && (
-                            <div>
-                              <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-slate-800 text-slate-300">
-                                Private Zone
-                              </span>
-                            </div>
-                          )}
+                            ) : (
+                              <p className="mt-2 text-sm text-slate-400">No name servers available</p>
+                            )}
+                          </div>
+
+                          {/* Right: Linked Server List */}
+                          <div>
+                            <span className="text-xs font-medium text-slate-400 uppercase">Linked Servers</span>
+                            {(() => {
+                              // Find domains/websites that match this hosted zone
+                              const zoneId = selectedHostedZone?.id;
+                              const zoneName = hostedZoneDetails.name.toLowerCase().replace(/\.$/, '');
+                              
+                              // Match domains by hostedZoneId (most accurate) or by domain name
+                              const linkedDomains = managedDomains.filter(d => {
+                                // First try to match by hostedZoneId if available
+                                if (zoneId && (d as any).hostedZoneId) {
+                                  return (d as any).hostedZoneId === zoneId || (d as any).hostedZoneId === zoneId.replace(/^\/hostedzone\//, '') || (d as any).hostedZoneId === `/hostedzone/${zoneId}`;
+                                }
+                                // Fallback to domain name matching
+                                const domainName = d.domain.toLowerCase();
+                                return domainName === zoneName || domainName.endsWith(`.${zoneName}`);
+                              });
+                              
+                              // Also check serverInfo domains (from current instance)
+                              const serverInfoLinkedDomains = (serverInfo?.domains || []).filter(d => {
+                                const domainName = d.domain.toLowerCase();
+                                return domainName === zoneName || domainName.endsWith(`.${zoneName}`);
+                              });
+                              
+                              // Get unique instance IDs ONLY from domains that match this zone
+                              const linkedInstancesMap = new Map<string, { instanceId: string; domains: string[] }>();
+                              
+                              // Add domains from managedDomains
+                              linkedDomains.forEach(d => {
+                                if (d.instanceId) {
+                                  if (!linkedInstancesMap.has(d.instanceId)) {
+                                    linkedInstancesMap.set(d.instanceId, { instanceId: d.instanceId, domains: [] });
+                                  }
+                                  linkedInstancesMap.get(d.instanceId)!.domains.push(d.domain);
+                                }
+                              });
+                              
+                              // Add domains from serverInfo (current instance)
+                              if (serverInfo?.instanceId && serverInfoLinkedDomains.length > 0) {
+                                if (!linkedInstancesMap.has(serverInfo.instanceId)) {
+                                  linkedInstancesMap.set(serverInfo.instanceId, { instanceId: serverInfo.instanceId, domains: [] });
+                                }
+                                serverInfoLinkedDomains.forEach(d => {
+                                  linkedInstancesMap.get(serverInfo.instanceId)!.domains.push(d.domain);
+                                });
+                              }
+
+                              if (linkedInstancesMap.size === 0) {
+                                return (
+                                  <div className="mt-2 text-sm text-slate-400">
+                                    <p>No linked servers found</p>
+                                    <p className="text-xs mt-1 text-slate-500">No domains or instances are currently using this hosted zone</p>
+                                  </div>
+                                );
+                              }
+
+                              return (
+                                <div className="mt-2 space-y-2">
+                                  {Array.from(linkedInstancesMap.values()).map((instanceGroup) => (
+                                    <div key={instanceGroup.instanceId} className="bg-slate-800/50 px-3 py-2 rounded border border-slate-700">
+                                      <div className="flex items-center justify-between">
+                                        <div>
+                                          <p className="text-sm font-medium text-slate-200">{instanceGroup.instanceId}</p>
+                                          <p className="text-xs text-slate-400 mt-0.5">
+                                            {instanceGroup.domains.length} linked domain{instanceGroup.domains.length !== 1 ? 's' : ''}
+                                          </p>
+                                        </div>
+                                      </div>
+                                      {instanceGroup.domains.length > 0 && (
+                                        <ul className="mt-2 text-xs text-slate-300 space-y-1">
+                                          {instanceGroup.domains.map((domain, dIdx) => (
+                                            <li key={dIdx} className="font-mono">{domain}</li>
+                                          ))}
+                                        </ul>
+                                      )}
+                                    </div>
+                                  ))}
+                                </div>
+                              );
+                            })()}
+                          </div>
                         </div>
                       </div>
 
@@ -2107,6 +2225,23 @@ export default function DomainsPage() {
         }
         confirmText="Delete Website"
         itemName={domainToDelete?.name}
+        requireTypeToConfirm={true}
+      />
+      <DeleteConfirmationModal
+        isOpen={deleteHostedZoneModalOpen}
+        onClose={() => {
+          setDeleteHostedZoneModalOpen(false);
+          setHostedZoneToDelete(null);
+        }}
+        onConfirm={deleteHostedZone}
+        title="Delete Hosted Zone"
+        message={
+          hostedZoneToDelete
+            ? `Are you sure you want to delete the hosted zone ${hostedZoneToDelete.name}? This action will permanently delete the Route53 hosted zone and all DNS records. This action cannot be undone.`
+            : 'Are you sure you want to delete this hosted zone?'
+        }
+        confirmText="Delete Hosted Zone"
+        itemName={hostedZoneToDelete?.name}
         requireTypeToConfirm={true}
       />
       {selectedInstanceId && (

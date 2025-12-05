@@ -53,6 +53,22 @@ export const createDomainsController = (
     res.json({ zones });
   }),
 
+  getHostedZone: asyncHandler(async (req: Request, res: Response) => {
+    const { zoneId } = req.params as { zoneId: string };
+    const zone = await dnsService.getHostedZone(zoneId);
+    if (!zone) {
+      res.status(404).json({ error: 'Hosted zone not found' });
+      return;
+    }
+    res.json(zone);
+  }),
+
+  deleteHostedZone: asyncHandler(async (req: Request, res: Response) => {
+    const { zoneId } = req.params as { zoneId: string };
+    await dnsService.deleteHostedZone(zoneId);
+    res.json({ success: true, message: 'Hosted zone deleted successfully' });
+  }),
+
   getDomainRecords: asyncHandler(async (req: Request, res: Response) => {
     const { domain } = req.params as { domain: string };
     const records = await dnsService.getDomainRecords(domain);

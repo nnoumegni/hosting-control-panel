@@ -25,6 +25,8 @@ export const createDomainsRouter = (
 
   // DNS endpoints
   router.get('/dns/zones', controller.listHostedZones);
+  router.get('/dns/zones/:zoneId', controller.getHostedZone);
+  router.delete('/dns/zones/:zoneId', controller.deleteHostedZone);
   router.get('/dns/records/:domain', controller.getDomainRecords);
   router.post('/dns/zones/:zoneId/records', controller.upsertDnsRecord);
   router.delete('/dns/zones/:zoneId/records/:recordName/:recordType', controller.deleteDnsRecord);
