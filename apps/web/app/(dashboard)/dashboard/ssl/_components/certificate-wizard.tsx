@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { Loader2, X, Info, HelpCircle, CheckCircle2, AlertTriangle, Shield } from 'lucide-react';
+import { Loader2, X, Info, HelpCircle, CheckCircle2, AlertTriangle, Shield, Save } from 'lucide-react';
 import { apiFetch } from '../../../../../lib/api';
 
 interface ACMEAccount {
@@ -68,6 +68,7 @@ export function CertificateWizard({
   const [acmeAccount, setAcmeAccount] = useState<ACMEAccount | null>(null);
   const [showWebhookHelp, setShowWebhookHelp] = useState(false);
   const [acmeError, setAcmeError] = useState<string | null>(null);
+  const [isConfiguringAcme, setIsConfiguringAcme] = useState(false);
 
   // Webhook DNS configuration
   const [webhookPresentUrl, setWebhookPresentUrl] = useState('');
@@ -110,6 +111,16 @@ export function CertificateWizard({
       setIssueSuccess(null);
     }
   }, [isOpen, instanceId, initialDomain, initialPrefixes, initialChallengeType]);
+
+  // Clear error/success states when navigating away from step 3
+  useEffect(() => {
+    if (step !== 3) {
+      setIssueError(null);
+      setIssueErrorDetails(null);
+      setIssueSuccess(null);
+      setIssueLogs([]);
+    }
+  }, [step]);
 
   const loadACMEAccount = async () => {
     try {
@@ -179,6 +190,8 @@ export function CertificateWizard({
   const configureACME = async () => {
     if (!email.trim()) return;
 
+    setIsConfiguringAcme(true);
+    setAcmeError(null);
     try {
       const account = await apiFetch<ACMEAccount>(
         `ssl/acme-account?instanceId=${encodeURIComponent(instanceId)}`,
@@ -193,7 +206,10 @@ export function CertificateWizard({
       setAcmeAccount(account);
       setStep(3);
     } catch (err: any) {
-      throw new Error(err.message || 'Failed to configure ACME account');
+      setAcmeError(err.message || 'Failed to configure ACME account');
+      throw err;
+    } finally {
+      setIsConfiguringAcme(false);
     }
   };
 
@@ -596,17 +612,26 @@ export function CertificateWizard({
                 </button>
                 <button
                   onClick={async () => {
-                    setAcmeError(null);
                     try {
                       await configureACME();
                     } catch (err: any) {
-                      setAcmeError(err.message || 'Failed to configure ACME account');
+                      // Error is handled in configureACME and displayed via acmeError
                     }
                   }}
-                  disabled={!email.trim()}
-                  className="px-4 py-2 rounded-lg bg-sky-600 hover:bg-sky-500 text-xs font-semibold transition disabled:opacity-50"
+                  disabled={!email.trim() || isConfiguringAcme}
+                  className="px-4 py-2 rounded-lg bg-sky-600 hover:bg-sky-500 text-xs font-semibold transition disabled:opacity-50 flex items-center gap-2"
                 >
-                  Save & Continue
+                  {isConfiguringAcme ? (
+                    <>
+                      <Save className="h-3 w-3 animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    <>
+                      <Save className="h-3 w-3" />
+                      Next
+                    </>
+                  )}
                 </button>
               </div>
 
