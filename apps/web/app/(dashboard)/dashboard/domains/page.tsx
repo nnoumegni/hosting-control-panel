@@ -73,6 +73,7 @@ export default function DomainsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedDomain, setSelectedDomain] = useState<string | null>(null);
+  const [selectedHostedZone, setSelectedHostedZone] = useState<{ id: string; name: string } | null>(null);
   const [activeTab, setActiveTab] = useState<'info' | 'ssl' | 'email' | 'ftp'>('info');
   const [dnsLookupDomain, setDnsLookupDomain] = useState<string | null>(null);
   const [showDnsLookupForm, setShowDnsLookupForm] = useState(false);
@@ -103,6 +104,10 @@ export default function DomainsPage() {
   const [isLoadingHostedZones, setIsLoadingHostedZones] = useState(false);
   const [hostedZonesError, setHostedZonesError] = useState<string | null>(null);
   const [hostedZonesLoaded, setHostedZonesLoaded] = useState(false);
+  const [hostedZoneDetails, setHostedZoneDetails] = useState<{ zoneId: string; name: string; nameServers: string[] } | null>(null);
+  const [hostedZoneRecords, setHostedZoneRecords] = useState<ZoneRecords | null>(null);
+  const [isLoadingHostedZoneDetails, setIsLoadingHostedZoneDetails] = useState(false);
+  const [hostedZoneDetailsError, setHostedZoneDetailsError] = useState<string | null>(null);
   
   // Selected instance ID state (for hooks that need it)
   const [selectedInstanceId, setSelectedInstanceId] = useState<string | null>(() => {
@@ -902,6 +907,16 @@ export default function DomainsPage() {
     }
   }, [sidebarTab, hostedZonesLoaded, isLoadingHostedZones]);
 
+  // Load hosted zone details when a hosted zone is selected
+  useEffect(() => {
+    if (selectedHostedZone) {
+      void loadHostedZoneDetails(selectedHostedZone.id, selectedHostedZone.name);
+    } else {
+      setHostedZoneDetails(null);
+      setHostedZoneRecords(null);
+    }
+  }, [selectedHostedZone]);
+
   const loadDnsRecords = async () => {
     if (!selectedDomain || !selectedDomain.trim() || !isValidDomainName(selectedDomain)) return;
     try {
@@ -934,6 +949,39 @@ export default function DomainsPage() {
       // Don't set hostedZonesLoaded to true on error, so it can retry
     } finally {
       setIsLoadingHostedZones(false);
+    }
+  };
+
+  const loadHostedZoneDetails = async (zoneId: string, zoneName: string) => {
+    try {
+      setIsLoadingHostedZoneDetails(true);
+      setHostedZoneDetailsError(null);
+      
+      // Load zone details and records in parallel
+      const [detailsResponse, recordsResponse] = await Promise.all([
+        apiFetch<{ zoneId: string; name: string; nameServers: string[] }>(
+          `domains/dns/zones/${zoneId}`
+        ).catch(() => null), // Fallback if endpoint doesn't exist
+        apiFetch<ZoneRecords>(`domains/dns/records/${zoneName}`).catch(() => null),
+      ]);
+      
+      if (detailsResponse) {
+        setHostedZoneDetails(detailsResponse);
+      } else {
+        // Fallback: create details from zone info
+        setHostedZoneDetails({ zoneId, name: zoneName, nameServers: [] });
+      }
+      
+      if (recordsResponse) {
+        setHostedZoneRecords(recordsResponse);
+      }
+    } catch (err: any) {
+      const message = err instanceof Error ? err.message : 'Failed to load hosted zone details';
+      setHostedZoneDetailsError(message);
+      setHostedZoneDetails(null);
+      setHostedZoneRecords(null);
+    } finally {
+      setIsLoadingHostedZoneDetails(false);
     }
   };
 
@@ -1094,6 +1142,7 @@ export default function DomainsPage() {
                         setDnsLookupDomain(domain);
                         setShowDnsLookupForm(true);
                         setSelectedDomain(null);
+                        setSelectedHostedZone(null); // Clear hosted zone selection
                         setDnsLookupCompleted(false); // Reset completion state
                         setDnsLookupHasRecords(false); // Reset records state
                         e.currentTarget.value = '';
@@ -1126,14 +1175,15 @@ export default function DomainsPage() {
                     if (input?.value.trim()) {
                       const domain = input.value.trim();
                       // Validate domain before performing lookup
-                      if (isValidDomainName(domain)) {
-                        setDnsLookupError(null);
-                        setDnsLookupDomain(domain);
-                        setShowDnsLookupForm(true);
-                        setSelectedDomain(null);
-                        setDnsLookupCompleted(false); // Reset completion state
-                        setDnsLookupHasRecords(false); // Reset records state
-                        input.value = '';
+                        if (isValidDomainName(domain)) {
+                          setDnsLookupError(null);
+                          setDnsLookupDomain(domain);
+                          setShowDnsLookupForm(true);
+                          setSelectedDomain(null);
+                          setSelectedHostedZone(null); // Clear hosted zone selection
+                          setDnsLookupCompleted(false); // Reset completion state
+                          setDnsLookupHasRecords(false); // Reset records state
+                          input.value = '';
                         } else {
                           // Show error for invalid domain
                           setDnsLookupError('Please enter a valid domain name');
@@ -1231,6 +1281,7 @@ export default function DomainsPage() {
                             key={domainName}
                             onClick={() => {
                               setSelectedDomain(domainName);
+                              setSelectedHostedZone(null);
                               setShowDnsLookupForm(false);
                               setActiveTab('info');
                             }}
@@ -1331,12 +1382,12 @@ export default function DomainsPage() {
                     <li
                       key={zone.id}
                       onClick={() => {
-                        setSelectedDomain(zone.name);
+                        setSelectedHostedZone({ id: zone.id, name: zone.name });
+                        setSelectedDomain(null);
                         setShowDnsLookupForm(false);
-                        setActiveTab('info');
                       }}
                       className={`px-2 py-2 rounded-md hover:bg-slate-800 cursor-pointer transition text-sm flex items-center justify-between gap-2 ${
-                        selectedDomain === zone.name
+                        selectedHostedZone?.id === zone.id
                           ? 'bg-slate-800 text-white font-medium'
                           : 'text-slate-300'
                       }`}
@@ -1399,16 +1450,22 @@ export default function DomainsPage() {
           {/* Header */}
           <header className="flex items-center justify-between p-4 bg-slate-900/80 border-b border-slate-800">
             <div className="flex items-center gap-2">
-              {currentDomain?.domain && (
+              {selectedHostedZone ? (
                 <>
-                  {hasActiveCertificate(currentDomain.domain) ? (
-                    <Lock className="h-5 w-5 text-emerald-400 flex-shrink-0" />
-                  ) : (
-                    <Unlock className="h-5 w-5 text-rose-400 flex-shrink-0" />
-                  )}
+                  <h2 className="text-lg font-semibold text-white">
+                    {selectedHostedZone.name}
+                  </h2>
+                  <button
+                    onClick={() => {
+                      // TODO: Handle delete hosted zone
+                    }}
+                    className="p-2 text-slate-400 hover:text-red-400 hover:bg-red-500/10 rounded transition"
+                    title="Delete hosted zone"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
                 </>
-              )}
-              {currentDomain?.domain ? (
+              ) : currentDomain?.domain ? (
                 <>
                   {(() => {
                     const hasSsl = hasActiveCertificate(currentDomain.domain);
@@ -1418,6 +1475,11 @@ export default function DomainsPage() {
                     
                     return (
                       <>
+                        {hasSsl ? (
+                          <Lock className="h-5 w-5 text-emerald-400 flex-shrink-0" />
+                        ) : (
+                          <Unlock className="h-5 w-5 text-rose-400 flex-shrink-0" />
+                        )}
                         <h2
                           onClick={() => window.open(url, '_blank', 'noopener,noreferrer')}
                           className="text-lg font-semibold text-white cursor-pointer hover:text-emerald-400 transition-colors"
@@ -1450,7 +1512,7 @@ export default function DomainsPage() {
                 </>
               ) : (
                 <h2 className="text-lg font-semibold text-white">
-                  {dnsLookupDomain ? `DNS Lookup: ${dnsLookupDomain}` : 'Select a website'}
+                  {dnsLookupDomain ? `DNS Lookup: ${dnsLookupDomain}` : sidebarTab === 'websites' ? 'Select a website' : 'Select a hosted zone'}
                 </h2>
               )}
             </div>
@@ -1471,77 +1533,191 @@ export default function DomainsPage() {
             )}
           </header>
 
-          {(currentDomain && !showDnsLookupForm) || showDnsLookupForm ? (
+          {/* Three separate panels: DNS Lookup, Website Details, or Hosted Zone Details */}
+          {showDnsLookupForm ? (
             <>
-              {/* Tabs - Only show if domain is selected and DNS lookup is not active */}
-              {currentDomain && !showDnsLookupForm && (
-                <div className="border-b border-slate-800 bg-slate-900/50">
-                  <nav className="flex space-x-6 px-6">
-                    <button
-                      onClick={() => setActiveTab('info')}
-                      className={`py-3 border-b-2 transition ${
-                        activeTab === 'info'
-                          ? 'border-emerald-600 font-medium text-emerald-400'
-                          : 'border-transparent text-slate-400 hover:text-emerald-400'
-                      }`}
-                    >
-                      Website Info
-                    </button>
-                    <button
-                      onClick={() => setActiveTab('ssl')}
-                      className={`py-3 border-b-2 transition ${
-                        activeTab === 'ssl'
-                          ? 'border-emerald-600 font-medium text-emerald-400'
-                          : 'border-transparent text-slate-400 hover:text-emerald-400'
-                      }`}
-                    >
-                      SSL Certificates
-                    </button>
-                    <button
-                      onClick={() => setActiveTab('email')}
-                      className={`py-3 border-b-2 transition ${
-                        activeTab === 'email'
-                          ? 'border-emerald-600 font-medium text-emerald-400'
-                          : 'border-transparent text-slate-400 hover:text-emerald-400'
-                      }`}
-                    >
-                      Identity (Email)
-                    </button>
-                    <button
-                      onClick={() => setActiveTab('ftp')}
-                      className={`py-3 border-b-2 transition ${
-                        activeTab === 'ftp'
-                          ? 'border-emerald-600 font-medium text-emerald-400'
-                          : 'border-transparent text-slate-400 hover:text-emerald-400'
-                      }`}
-                    >
-                      FTP Accounts
-                    </button>
-                  </nav>
-                </div>
+              {/* DNS Lookup Panel */}
+              {selectedInstanceId && (
+                <section className="p-6 overflow-y-auto flex-1">
+                  <DNSLookupPanel 
+                    key={`dns-lookup-${dnsLookupDomain || 'new'}`}
+                    instanceId={selectedInstanceId}
+                    initialHostname={dnsLookupDomain || undefined}
+                    triggerLookup={dnsLookupDomain || undefined}
+                    showDetailsByDefault={false}
+                    hideSearchForm={true}
+                    onLookupResults={(hasRecords, domain) => {
+                      setDnsLookupHasRecords(hasRecords);
+                      setDnsLookupCompleted(true);
+                    }}
+                    onBuyDomain={(domain) => {
+                      setIsAddDomainModalOpen(true);
+                    }}
+                    managedDomains={managedDomains.map(d => d.domain)}
+                  />
+                </section>
               )}
+            </>
+          ) : selectedHostedZone ? (
+            <>
+              {/* Hosted Zone Details Panel */}
+              <section className="p-6 overflow-y-auto flex-1">
+                  {isLoadingHostedZoneDetails ? (
+                    <div className="flex items-center justify-center py-12">
+                      <Loader2 className="h-8 w-8 animate-spin text-slate-400" />
+                    </div>
+                  ) : hostedZoneDetailsError ? (
+                    <div className="rounded-xl border border-rose-500/40 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">
+                      {hostedZoneDetailsError}
+                    </div>
+                  ) : hostedZoneDetails ? (
+                    <div className="space-y-6">
+                      {/* Zone Information */}
+                      <div className="bg-slate-900/60 rounded-xl border border-slate-800 p-6">
+                        <h3 className="text-lg font-semibold text-white mb-4">Zone Information</h3>
+                        <div className="space-y-3">
+                          <div>
+                            <span className="text-xs font-medium text-slate-400 uppercase">Zone Name</span>
+                            <p className="text-sm text-slate-200 mt-1">{hostedZoneDetails.name}</p>
+                          </div>
+                          <div>
+                            <span className="text-xs font-medium text-slate-400 uppercase">Zone ID</span>
+                            <p className="text-sm text-slate-200 mt-1 font-mono">{hostedZoneDetails.zoneId}</p>
+                          </div>
+                          {hostedZoneDetails.nameServers.length > 0 && (
+                            <div>
+                              <span className="text-xs font-medium text-slate-400 uppercase">Name Servers</span>
+                              <ul className="mt-1 space-y-1">
+                                {hostedZoneDetails.nameServers.map((ns, idx) => (
+                                  <li key={idx} className="text-sm text-slate-200 font-mono">{ns}</li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+                          {hostedZones.find(z => z.id === selectedHostedZone.id)?.privateZone && (
+                            <div>
+                              <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-slate-800 text-slate-300">
+                                Private Zone
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* DNS Records */}
+                      <div className="bg-slate-900/60 rounded-xl border border-slate-800 p-6">
+                        <div className="flex items-center justify-between mb-4">
+                          <h3 className="text-lg font-semibold text-white">DNS Records</h3>
+                          <button
+                            className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-sm rounded transition"
+                            onClick={() => {
+                              // TODO: Open add DNS record modal
+                            }}
+                          >
+                            <Plus className="h-4 w-4 inline mr-1" />
+                            Add Record
+                          </button>
+                        </div>
+                        {hostedZoneRecords ? (
+                          <div className="rounded-xl border border-slate-800 bg-slate-900/60 overflow-hidden">
+                            <table className="w-full border-collapse text-sm">
+                              <thead className="bg-slate-900/80">
+                                <tr>
+                                  <th className="px-4 py-2 text-left text-slate-400 font-semibold">Name</th>
+                                  <th className="px-4 py-2 text-left text-slate-400 font-semibold">Type</th>
+                                  <th className="px-4 py-2 text-left text-slate-400 font-semibold">TTL</th>
+                                  <th className="px-4 py-2 text-left text-slate-400 font-semibold">Value</th>
+                                  <th className="px-4 py-2 text-right text-slate-400 font-semibold">Actions</th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-slate-800">
+                                {hostedZoneRecords.records.map((record: DnsRecord, idx: number) => (
+                                  <tr key={idx} className="hover:bg-slate-900/60">
+                                    <td className="px-4 py-2 text-slate-200 font-mono text-xs">{record.name}</td>
+                                    <td className="px-4 py-2 text-slate-300">{record.type}</td>
+                                    <td className="px-4 py-2 text-slate-300">{record.ttl ?? 'N/A'}</td>
+                                    <td className="px-4 py-2 text-slate-200 font-mono text-xs">
+                                      {record.values.join(', ')}
+                                    </td>
+                                    <td className="px-4 py-2 text-right">
+                                      <button
+                                        className="text-slate-400 hover:text-red-400 transition"
+                                        onClick={() => {
+                                          // TODO: Delete DNS record
+                                        }}
+                                        title="Delete record"
+                                      >
+                                        <Trash2 className="h-4 w-4" />
+                                      </button>
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        ) : (
+                          <div className="text-center py-8 text-slate-400 text-sm">
+                            <p>No DNS records found.</p>
+                            <p className="text-xs mt-1">Add a DNS record to get started!</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ) : null}
+              </section>
+            </>
+          ) : currentDomain ? (
+            <>
+              {/* Website Details Panel */}
+              {/* Tabs */}
+              <div className="border-b border-slate-800 bg-slate-900/50">
+                <nav className="flex space-x-6 px-6">
+                  <button
+                    onClick={() => setActiveTab('info')}
+                    className={`py-3 border-b-2 transition ${
+                      activeTab === 'info'
+                        ? 'border-emerald-600 font-medium text-emerald-400'
+                        : 'border-transparent text-slate-400 hover:text-emerald-400'
+                    }`}
+                  >
+                    Website Info
+                  </button>
+                  <button
+                    onClick={() => setActiveTab('ssl')}
+                    className={`py-3 border-b-2 transition ${
+                      activeTab === 'ssl'
+                        ? 'border-emerald-600 font-medium text-emerald-400'
+                        : 'border-transparent text-slate-400 hover:text-emerald-400'
+                    }`}
+                  >
+                    SSL Certificates
+                  </button>
+                  <button
+                    onClick={() => setActiveTab('email')}
+                    className={`py-3 border-b-2 transition ${
+                      activeTab === 'email'
+                        ? 'border-emerald-600 font-medium text-emerald-400'
+                        : 'border-transparent text-slate-400 hover:text-emerald-400'
+                    }`}
+                  >
+                    Identity (Email)
+                  </button>
+                  <button
+                    onClick={() => setActiveTab('ftp')}
+                    className={`py-3 border-b-2 transition ${
+                      activeTab === 'ftp'
+                        ? 'border-emerald-600 font-medium text-emerald-400'
+                        : 'border-transparent text-slate-400 hover:text-emerald-400'
+                    }`}
+                  >
+                    FTP Accounts
+                  </button>
+                </nav>
+              </div>
 
               {/* Tab Content */}
               <section className="p-6 overflow-y-auto flex-1">
-              {showDnsLookupForm && selectedInstanceId && (
-                <DNSLookupPanel 
-                  key={`dns-lookup-${dnsLookupDomain || 'new'}`}
-                  instanceId={selectedInstanceId}
-                  initialHostname={dnsLookupDomain || undefined}
-                  triggerLookup={dnsLookupDomain || undefined}
-                  showDetailsByDefault={false}
-                  hideSearchForm={true}
-                  onLookupResults={(hasRecords, domain) => {
-                    setDnsLookupHasRecords(hasRecords);
-                    setDnsLookupCompleted(true);
-                  }}
-                  onBuyDomain={(domain) => {
-                    setIsAddDomainModalOpen(true);
-                  }}
-                  managedDomains={managedDomains.map(d => d.domain)}
-                />
-              )}
-              {!showDnsLookupForm && activeTab === 'info' && currentDomain && (
+              {activeTab === 'info' && currentDomain && (
                 <div className="space-y-6">
                   <div>
                     <div className="flex items-center justify-between mb-4">
