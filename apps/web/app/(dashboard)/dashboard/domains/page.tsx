@@ -13,6 +13,7 @@ import { WebServerInstallPanel } from './_components/web-server-install-panel';
 import { AddDomainModal } from './_components/add-domain-modal';
 import { DeleteConfirmationModal } from './_components/delete-confirmation-modal';
 import { FtpAccountsPanel } from './_components/ftp-accounts-panel';
+import { CertificateWizard } from '../ssl/_components/certificate-wizard';
 
 interface WebServerInfo {
   type: 'nginx' | 'apache' | 'none';
@@ -96,6 +97,7 @@ export default function DomainsPage() {
   const installationPollIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const [hasInstanceId, setHasInstanceId] = useState<boolean | null>(null); // null = checking, true = has it, false = doesn't have it
   const isInitializingRef = useRef(false);
+  const [showCertificateWizard, setShowCertificateWizard] = useState(false);
   
   // Selected instance ID state (for hooks that need it)
   const [selectedInstanceId, setSelectedInstanceId] = useState<string | null>(() => {
@@ -1602,6 +1604,7 @@ export default function DomainsPage() {
                       </button>
                       <button
                         type="button"
+                        onClick={() => setShowCertificateWizard(true)}
                         className="flex items-center gap-2 bg-emerald-600 text-white px-3 py-1.5 rounded hover:bg-emerald-700 transition text-sm"
                       >
                         <Plus className="h-4 w-4" />
@@ -1807,6 +1810,19 @@ export default function DomainsPage() {
         itemName={domainToDelete?.name}
         requireTypeToConfirm={true}
       />
+      {selectedInstanceId && (
+        <CertificateWizard
+          isOpen={showCertificateWizard}
+          onClose={() => setShowCertificateWizard(false)}
+          onSuccess={() => {
+            setShowCertificateWizard(false);
+            void loadSslCertificates();
+            refreshSSLStatus();
+          }}
+          instanceId={selectedInstanceId}
+          initialDomain={currentDomain?.domain}
+        />
+      )}
     </div>
   );
 }
