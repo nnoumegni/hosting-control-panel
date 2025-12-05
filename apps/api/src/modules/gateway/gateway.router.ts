@@ -15,5 +15,9 @@ export const createGatewayRouter = (service: GatewayService) => {
   router.get('/rules', controller.getRules);
   router.get('/stats', controller.getStats);
 
+  // Gateway Requirements endpoints
+  router.get('/requirements', controller.checkAllRequirements);
+  router.post('/requirements', controller.installAllRequirements);
+
   return router;
 };

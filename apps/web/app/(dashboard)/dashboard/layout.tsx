@@ -43,7 +43,7 @@ const navLinks = [
   { href: '/dashboard/backups', label: 'Backups', icon: HardDrive },
   { href: '/dashboard/monitoring', label: 'Monitoring', icon: Activity },
   { href: '/dashboard/themes-and-apps', label: 'Themes & Apps', icon: Palette },
-  { href: '/dashboard/system-status', label: 'System Status', icon: CheckCircle2 },
+  { href: '/dashboard/system-status', label: 'Software Status', icon: CheckCircle2 },
 ];
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {

@@ -185,4 +185,43 @@ export class GatewayService {
   async getStats(instanceId: string): Promise<GatewayStats> {
     return this.agentRequest<GatewayStats>(instanceId, 'GET', '/gateway/stats');
   }
+
+  // Gateway Requirements API
+  async checkAllRequirements(instanceId: string): Promise<RequirementsReport> {
+    return this.agentRequest<RequirementsReport>(instanceId, 'GET', '/gateway/requirements');
+  }
+
+  async installAllRequirements(instanceId: string): Promise<RequirementsReport> {
+    return this.agentRequest<RequirementsReport>(instanceId, 'POST', '/gateway/requirements', { install: true });
+  }
+
+  async checkRequirement(instanceId: string, key: string): Promise<RequirementsReport> {
+    return this.agentRequest<RequirementsReport>(instanceId, 'POST', '/gateway/requirements', { key });
+  }
+
+  async installRequirement(instanceId: string, key: string): Promise<RequirementsReport> {
+    return this.agentRequest<RequirementsReport>(instanceId, 'POST', '/gateway/requirements', { key, install: true });
+  }
+}
+
+export interface RequirementResult {
+  key: string;
+  label: string;
+  status: 'OK' | 'WARN' | 'ERROR';
+  details?: string;
+  fixHint?: string;
+}
+
+export interface RequirementsReport {
+  ok: boolean;
+  report: {
+    os: string;
+    kernel: string;
+    hasErrors: boolean;
+    hasWarnings: boolean;
+    checkedAt: string;
+    results: RequirementResult[];
+    nftConfigPath?: string;
+  };
+  error?: string;
 }
