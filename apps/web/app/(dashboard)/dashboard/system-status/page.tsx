@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { CheckCircle2, AlertCircle, XCircle, Loader2, RefreshCw, Wrench, Server, Network, Shield, Database, Globe, Lock, FileText, Settings, Activity, HardDrive, Clock, ChevronDown, ChevronRight, Grid3x3 } from 'lucide-react';
 import { apiFetch } from '../../../../lib/api';
 import { getSelectedInstanceId } from '../../../../lib/instance-utils';
@@ -245,15 +245,18 @@ export default function SoftwareStatusPage() {
     }
   }, [selectedInstanceId, checkRequirements]);
 
-  // Group requirements by category
-  const groupedRequirements = report?.report.results.reduce((acc, req) => {
-    const category = getCategory(req.key);
-    if (!acc[category]) {
-      acc[category] = [];
-    }
-    acc[category].push(req);
-    return acc;
-  }, {} as Record<string, RequirementResult[]>) || {};
+  // Group requirements by category (memoized to prevent infinite loops)
+  const groupedRequirements = useMemo(() => {
+    if (!report?.report.results) return {};
+    return report.report.results.reduce((acc, req) => {
+      const category = getCategory(req.key);
+      if (!acc[category]) {
+        acc[category] = [];
+      }
+      acc[category].push(req);
+      return acc;
+    }, {} as Record<string, RequirementResult[]>);
+  }, [report?.report.results]);
 
   // Calculate status counts for all requirements
   const statusCounts = report?.report.results.reduce((acc, req) => {
@@ -292,25 +295,28 @@ export default function SoftwareStatusPage() {
     return acc;
   }, {} as Record<string, RequirementResult[]>);
 
+  // Get category names (memoized)
+  const categoryNames = useMemo(() => Object.keys(groupedRequirements), [groupedRequirements]);
+
   // Auto-expand all categories when a status filter is selected
   // Collapse by default when "All" is selected (unless manually expanded)
   useEffect(() => {
-    const allCategoryNames = Object.keys(groupedRequirements);
+    if (categoryNames.length === 0) return;
     
     if (selectedStatus !== null) {
       // When a status filter is selected, expand all categories
       // But respect manually collapsed categories
       const expanded = new Set(
-        allCategoryNames.filter(cat => !manuallyCollapsedCategories.has(cat))
+        categoryNames.filter(cat => !manuallyCollapsedCategories.has(cat))
       );
       setExpandedCategories(expanded);
     } else {
       // When "All" is selected, only keep manually expanded categories
       setExpandedCategories(new Set(
-        allCategoryNames.filter(cat => manuallyExpandedCategories.has(cat))
+        categoryNames.filter(cat => manuallyExpandedCategories.has(cat))
       ));
     }
-  }, [selectedStatus, groupedRequirements, manuallyExpandedCategories, manuallyCollapsedCategories]);
+  }, [selectedStatus, categoryNames, manuallyExpandedCategories, manuallyCollapsedCategories]);
 
   // Toggle category expansion
   const toggleCategory = (category: string) => {
@@ -357,7 +363,7 @@ export default function SoftwareStatusPage() {
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Software Status</h1>
           <p className="text-slate-400 mt-1">
-            Check and install system requirements for the JetCamer agent and all its features
+            Check and install system requirements.
           </p>
         </div>
         <div className="flex items-center gap-3">

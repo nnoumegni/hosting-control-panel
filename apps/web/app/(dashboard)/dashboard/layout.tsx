@@ -27,6 +27,7 @@ import { AuthGuard } from '../../../components/auth-guard';
 import { AwsCredentialsGuard } from './_components/aws-credentials-guard';
 import { ApiEndpointBanner } from '../../../components/api-endpoint-banner';
 import { AIConfigModal } from './security/_components/ai-config-modal';
+import { SoftwareStatusBadge } from './_components/software-status-badge';
 
 const navLinks = [
   { href: '/dashboard', label: 'Overview', icon: LayoutDashboard },
@@ -125,9 +126,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                   <Brain className="h-4 w-4" />
                   AI Providers
                 </button>
-                <div className="rounded-md border border-slate-800 bg-slate-800/50 p-4 text-xs text-slate-400">
-                  AWS Region: <span className="font-medium text-slate-200">{serverSettings?.awsRegion ?? 'us-east-1'}</span>
-                </div>
+                <SoftwareStatusBadge />
               </div>
             </div>
           </aside>
