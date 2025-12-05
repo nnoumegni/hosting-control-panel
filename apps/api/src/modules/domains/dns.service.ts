@@ -308,9 +308,23 @@ export class DnsService {
       );
 
       logger.info({ zoneId }, 'Hosted zone deleted');
-    } catch (error) {
+    } catch (error: any) {
       logger.error({ err: error, zoneId }, 'Failed to delete hosted zone');
-      throw error;
+      
+      // Provide more user-friendly error messages
+      if (error.name === 'HostedZoneNotEmpty' || error.Code === 'HostedZoneNotEmpty') {
+        throw new Error('Cannot delete hosted zone: The hosted zone contains records that must be deleted first. Please delete all DNS records (except NS and SOA) before deleting the hosted zone.');
+      }
+      if (error.name === 'InvalidInput' || error.Code === 'InvalidInput') {
+        throw new Error(`Invalid hosted zone ID: ${zoneId}`);
+      }
+      if (error.name === 'NoSuchHostedZone' || error.Code === 'NoSuchHostedZone') {
+        throw new Error(`Hosted zone not found: ${zoneId}`);
+      }
+      
+      // Re-throw with original message if it's a string, otherwise use a generic message
+      const errorMessage = error.message || error.Message || 'Failed to delete hosted zone';
+      throw new Error(errorMessage);
     }
   }
 

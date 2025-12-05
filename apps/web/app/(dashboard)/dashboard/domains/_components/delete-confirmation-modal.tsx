@@ -12,6 +12,7 @@ interface DeleteConfirmationModalProps {
   confirmText?: string;
   itemName?: string;
   requireTypeToConfirm?: boolean; // If true, user must type the item name or "DELETE" to confirm
+  error?: string | null; // Optional error message to display
 }
 
 export function DeleteConfirmationModal({
@@ -23,6 +24,7 @@ export function DeleteConfirmationModal({
   confirmText = 'Delete',
   itemName,
   requireTypeToConfirm = false,
+  error = null,
 }: DeleteConfirmationModalProps) {
   const [confirmationText, setConfirmationText] = useState('');
   const [isDeleting, setIsDeleting] = useState(false);
@@ -42,9 +44,15 @@ export function DeleteConfirmationModal({
       await onConfirm();
       // Reset form on success
       setConfirmationText('');
+      // Only close if there's no error (error prop will be set by parent if deletion failed)
+      // The parent will set the error state, and we check it here
+      // But since state updates are async, we need to wait a bit or check the error prop
+      // Actually, if onConfirm throws, we won't reach here, so we can safely close
       onClose();
     } catch (error) {
       // Error handling is done by the parent component
+      // The parent will set the error prop, and we should NOT close the modal
+      // Don't call onClose() here - let the error be displayed
       console.error('Delete failed', error);
     } finally {
       setIsDeleting(false);
@@ -82,9 +90,23 @@ export function DeleteConfirmationModal({
         </div>
 
         <div className="p-6 space-y-4">
-          <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-4">
-            <p className="text-sm text-red-300">{message}</p>
-          </div>
+          {!error && (
+            <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-4">
+              <p className="text-sm text-red-300">{message}</p>
+            </div>
+          )}
+
+          {error && (
+            <div className="bg-rose-500/10 border border-rose-500/30 rounded-lg p-4">
+              <div className="flex items-start gap-2">
+                <AlertTriangle className="h-5 w-5 text-rose-400 flex-shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-rose-300 mb-1">Error</p>
+                  <p className="text-sm text-rose-200">{error}</p>
+                </div>
+              </div>
+            </div>
+          )}
 
           {requireTypeToConfirm && itemName && (
             <div>

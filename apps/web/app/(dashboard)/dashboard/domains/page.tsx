@@ -110,6 +110,7 @@ export default function DomainsPage() {
   const [hostedZoneDetailsError, setHostedZoneDetailsError] = useState<string | null>(null);
   const [hostedZoneToDelete, setHostedZoneToDelete] = useState<{ id: string; name: string } | null>(null);
   const [deleteHostedZoneModalOpen, setDeleteHostedZoneModalOpen] = useState(false);
+  const [deleteHostedZoneError, setDeleteHostedZoneError] = useState<string | null>(null);
   
   // Selected instance ID state (for hooks that need it)
   const [selectedInstanceId, setSelectedInstanceId] = useState<string | null>(() => {
@@ -629,6 +630,9 @@ export default function DomainsPage() {
   const deleteHostedZone = async () => {
     if (!hostedZoneToDelete) return;
 
+    // Clear any previous error
+    setDeleteHostedZoneError(null);
+
     try {
       await apiFetch(`domains/dns/zones/${hostedZoneToDelete.id}`, {
         method: 'DELETE',
@@ -646,10 +650,22 @@ export default function DomainsPage() {
       
       setDeleteHostedZoneModalOpen(false);
       setHostedZoneToDelete(null);
+      setDeleteHostedZoneError(null);
     } catch (err: any) {
-      const message = err instanceof Error ? err.message : 'Failed to delete hosted zone';
-      setError(message);
+      // Extract error message from API response
+      let message = 'Failed to delete hosted zone';
+      if (err?.response?.data?.error) {
+        message = err.response.data.error;
+      } else if (err?.data?.error) {
+        message = err.data.error;
+      } else if (err?.message) {
+        message = err.message;
+      }
+      
+      setDeleteHostedZoneError(message);
       console.error('Failed to delete hosted zone', err);
+      // Re-throw the error so the modal knows it failed and stays open
+      throw new Error(message);
     }
   };
 
@@ -2232,6 +2248,7 @@ export default function DomainsPage() {
         onClose={() => {
           setDeleteHostedZoneModalOpen(false);
           setHostedZoneToDelete(null);
+          setDeleteHostedZoneError(null);
         }}
         onConfirm={deleteHostedZone}
         title="Delete Hosted Zone"
@@ -2243,6 +2260,7 @@ export default function DomainsPage() {
         confirmText="Delete Hosted Zone"
         itemName={hostedZoneToDelete?.name}
         requireTypeToConfirm={true}
+        error={deleteHostedZoneError}
       />
       {selectedInstanceId && (
         <CertificateWizard

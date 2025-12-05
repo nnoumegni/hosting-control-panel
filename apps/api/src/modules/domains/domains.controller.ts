@@ -65,8 +65,17 @@ export const createDomainsController = (
 
   deleteHostedZone: asyncHandler(async (req: Request, res: Response) => {
     const { zoneId } = req.params as { zoneId: string };
-    await dnsService.deleteHostedZone(zoneId);
-    res.json({ success: true, message: 'Hosted zone deleted successfully' });
+    try {
+      await dnsService.deleteHostedZone(zoneId);
+      res.json({ success: true, message: 'Hosted zone deleted successfully' });
+    } catch (error: any) {
+      // Forward the error message from the service
+      const statusCode = error.name === 'NoSuchHostedZone' || error.message?.includes('not found') ? 404 : 400;
+      res.status(statusCode).json({ 
+        error: error.message || 'Failed to delete hosted zone',
+        success: false 
+      });
+    }
   }),
 
   getDomainRecords: asyncHandler(async (req: Request, res: Response) => {
