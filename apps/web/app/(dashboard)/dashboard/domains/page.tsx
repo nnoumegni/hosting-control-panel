@@ -13,6 +13,7 @@ import { WebServerInstallPanel } from './_components/web-server-install-panel';
 import { AddDomainModal } from './_components/add-domain-modal';
 import { DeleteConfirmationModal } from './_components/delete-confirmation-modal';
 import { AddDnsRecordModal } from './_components/add-dns-record-modal';
+import { AddHostedZoneModal } from './_components/add-hosted-zone-modal';
 import { FtpAccountsPanel } from './_components/ftp-accounts-panel';
 import { CertificateWizard } from '../ssl/_components/certificate-wizard';
 
@@ -115,6 +116,7 @@ export default function DomainsPage() {
   const [isAddDnsRecordModalOpen, setIsAddDnsRecordModalOpen] = useState(false);
   const [dnsRecordToDelete, setDnsRecordToDelete] = useState<{ name: string; type: string } | null>(null);
   const [deleteDnsRecordModalOpen, setDeleteDnsRecordModalOpen] = useState(false);
+  const [isAddHostedZoneModalOpen, setIsAddHostedZoneModalOpen] = useState(false);
   
   // Selected instance ID state (for hooks that need it)
   const [selectedInstanceId, setSelectedInstanceId] = useState<string | null>(() => {
@@ -1331,8 +1333,7 @@ export default function DomainsPage() {
                 if (sidebarTab === 'websites') {
                   setIsAddDomainModalOpen(true);
                 } else {
-                  // TODO: Open add hosted zone modal
-                  setIsAddDomainModalOpen(true); // For now, use same modal
+                  setIsAddHostedZoneModalOpen(true);
                 }
               }}
               className="ml-auto p-1.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded transition-colors"
@@ -1634,8 +1635,7 @@ export default function DomainsPage() {
                   if (sidebarTab === 'websites') {
                     setIsAddDomainModalOpen(true);
                   } else {
-                    // TODO: Open add hosted zone modal
-                    setIsAddDomainModalOpen(true); // For now, use same modal
+                    setIsAddHostedZoneModalOpen(true);
                   }
                 }}
                 className="text-slate-500 text-sm hover:text-emerald-400 transition-colors"
@@ -2347,6 +2347,16 @@ export default function DomainsPage() {
         confirmText="Delete Record"
         itemName={dnsRecordToDelete ? `${dnsRecordToDelete.name} (${dnsRecordToDelete.type})` : undefined}
         requireTypeToConfirm={false}
+      />
+      <AddHostedZoneModal
+        isOpen={isAddHostedZoneModalOpen}
+        onClose={() => setIsAddHostedZoneModalOpen(false)}
+        onSuccess={() => {
+          setIsAddHostedZoneModalOpen(false);
+          // Reload hosted zones list
+          setHostedZonesLoaded(false);
+          void loadHostedZones();
+        }}
       />
       {selectedInstanceId && (
         <CertificateWizard

@@ -63,6 +63,27 @@ export const createDomainsController = (
     res.json(zone);
   }),
 
+  createHostedZone: asyncHandler(async (req: Request, res: Response) => {
+    const { domain } = req.body as { domain: string };
+    
+    if (!domain || !domain.trim()) {
+      res.status(400).json({ error: 'Domain name is required' });
+      return;
+    }
+
+    try {
+      const result = await dnsService.createHostedZone(domain.trim());
+      res.json({ success: true, ...result, message: 'Hosted zone created successfully' });
+    } catch (error: any) {
+      const statusCode = error.name === 'InvalidInput' || error.Code === 'InvalidInput' ? 400 : 500;
+      const errorMessage = error.message || error.Message || 'Failed to create hosted zone';
+      res.status(statusCode).json({ 
+        error: errorMessage,
+        success: false 
+      });
+    }
+  }),
+
   deleteHostedZone: asyncHandler(async (req: Request, res: Response) => {
     const { zoneId } = req.params as { zoneId: string };
     try {
