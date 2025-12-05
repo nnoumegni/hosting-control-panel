@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Loader2, X, Info, HelpCircle, CheckCircle2, AlertTriangle, Shield, Save } from 'lucide-react';
 import { apiFetch } from '../../../../../lib/api';
+import { DNSProviderConfig as DNSProviderConfigComponent, type DNSProviderConfig } from './dns-provider-config';
 
 interface ACMEAccount {
   email: string;
@@ -66,15 +67,16 @@ export function CertificateWizard({
   const [issueErrorDetails, setIssueErrorDetails] = useState<string | null>(null);
   const [issueSuccess, setIssueSuccess] = useState<SSLCertificate | null>(null);
   const [acmeAccount, setAcmeAccount] = useState<ACMEAccount | null>(null);
-  const [showWebhookHelp, setShowWebhookHelp] = useState(false);
   const [acmeError, setAcmeError] = useState<string | null>(null);
   const [isConfiguringAcme, setIsConfiguringAcme] = useState(false);
 
-  // Webhook DNS configuration
-  const [webhookPresentUrl, setWebhookPresentUrl] = useState('');
-  const [webhookCleanupUrl, setWebhookCleanupUrl] = useState('');
-  const [webhookAuthHeader, setWebhookAuthHeader] = useState('');
-  const [webhookWaitSeconds, setWebhookWaitSeconds] = useState('60');
+  // DNS Provider configuration
+  const [dnsProviderConfig, setDnsProviderConfig] = useState<DNSProviderConfig>({
+    provider: 'manual',
+    credentials: {},
+  });
+  const [isDetectingDnsProvider, setIsDetectingDnsProvider] = useState(false);
+  const [dnsProviderDetected, setDnsProviderDetected] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
@@ -109,6 +111,8 @@ export function CertificateWizard({
       setIssueError(null);
       setIssueErrorDetails(null);
       setIssueSuccess(null);
+      setDnsProviderDetected(false);
+      setDnsProviderConfig({ provider: 'manual', credentials: {} });
     }
   }, [isOpen, instanceId, initialDomain, initialPrefixes, initialChallengeType]);
 
@@ -135,6 +139,99 @@ export function CertificateWizard({
     } catch (err) {
       console.warn('Failed to load ACME account', err);
       setAcmeAccount(null);
+    }
+  };
+
+  const detectDnsProvider = async () => {
+    if (!domain || !instanceId || dnsProviderDetected) {
+      return;
+    }
+
+    setIsDetectingDnsProvider(true);
+    try {
+      // Check if domain has a Route53 hosted zone
+      const zonesResponse = await apiFetch<{ zones: Array<{ id: string; name: string }> }>('domains/dns/zones');
+      const matchingZone = zonesResponse.zones?.find(zone => {
+        const zoneName = zone.name.toLowerCase().replace(/\.$/, '');
+        const domainName = domain.toLowerCase();
+        return domainName === zoneName || domainName.endsWith(`.${zoneName}`);
+      });
+
+      if (matchingZone) {
+        // Domain has Route53 hosted zone, check name servers to confirm
+        try {
+          const zoneDetails = await apiFetch<{ zoneId: string; name: string; nameServers: string[] }>(
+            `domains/dns/zones/${matchingZone.id}`
+          );
+          
+          if (zoneDetails.nameServers && zoneDetails.nameServers.length > 0) {
+            // Check if name servers indicate Cloudflare
+            const isCloudflare = zoneDetails.nameServers.some(ns => 
+              ns.toLowerCase().includes('cloudflare')
+            );
+            
+            if (isCloudflare) {
+              setDnsProviderConfig({ provider: 'cloudflare', credentials: {} });
+              setDnsProviderDetected(true);
+              setIsDetectingDnsProvider(false);
+              return;
+            }
+            
+            // Route53 name servers typically contain 'awsdns' or are in format ns-*.awsdns-*.com
+            const isRoute53 = zoneDetails.nameServers.some(ns => 
+              ns.toLowerCase().includes('awsdns') || ns.toLowerCase().includes('route53')
+            );
+            
+            if (isRoute53) {
+              setDnsProviderConfig({ provider: 'route53', credentials: {} });
+              setDnsProviderDetected(true);
+              setIsDetectingDnsProvider(false);
+              return;
+            }
+          }
+        } catch {
+          // If we can't get zone details, assume Route53 since zone exists
+          setDnsProviderConfig({ provider: 'route53', credentials: {} });
+          setDnsProviderDetected(true);
+          setIsDetectingDnsProvider(false);
+          return;
+        }
+      }
+
+      // No Route53 zone found, try to detect from DNS lookup
+      try {
+        const dnsResponse = await apiFetch<{ records: Record<string, Array<{ type: string; value: string }>> }>(
+          `dns/diagnostics?hostname=${encodeURIComponent(domain)}&instanceId=${encodeURIComponent(instanceId)}`
+        );
+        
+        // Check NS records for Cloudflare
+        const nsRecords = dnsResponse.records?.NS;
+        if (nsRecords && nsRecords.length > 0) {
+          const isCloudflare = nsRecords.some(record => 
+            record.value.toLowerCase().includes('cloudflare')
+          );
+          
+          if (isCloudflare) {
+            setDnsProviderConfig({ provider: 'cloudflare', credentials: {} });
+            setDnsProviderDetected(true);
+            setIsDetectingDnsProvider(false);
+            return;
+          }
+        }
+      } catch {
+        // DNS lookup failed, will default to manual
+      }
+
+      // Default to manual if nothing detected
+      setDnsProviderConfig({ provider: 'manual', credentials: {} });
+      setDnsProviderDetected(true);
+    } catch (error) {
+      // Detection failed, default to manual
+      console.warn('Failed to detect DNS provider:', error);
+      setDnsProviderConfig({ provider: 'manual', credentials: {} });
+      setDnsProviderDetected(true);
+    } finally {
+      setIsDetectingDnsProvider(false);
     }
   };
 
@@ -254,16 +351,13 @@ export function CertificateWizard({
       // Configure challenge type
       if (challengeType === 'dns') {
         issueConfig.challengeType = 'dns';
+        // Map 'manual' to 'webhook' for the agent API
+        const providerForAgent = dnsProviderConfig.provider === 'manual' ? 'webhook' : dnsProviderConfig.provider;
         issueConfig.dnsProvider = {
-          provider: 'webhook',
-          credentials: {
-            WEBHOOK_PRESENT_URL: webhookPresentUrl,
-            WEBHOOK_CLEANUP_URL: webhookCleanupUrl,
-            WEBHOOK_AUTH_HEADER: webhookAuthHeader || undefined,
-            WEBHOOK_WAIT_SECONDS: webhookWaitSeconds || '60',
-          },
+          provider: providerForAgent,
+          credentials: dnsProviderConfig.credentials || {},
         };
-        addLog('Using DNS-01 challenge with webhook provider...');
+        addLog(`Using DNS-01 challenge with ${dnsProviderConfig.provider === 'manual' ? 'webhook' : dnsProviderConfig.provider} provider...`);
       } else {
         addLog('Using HTTP-01 challenge...');
       }
@@ -342,9 +436,9 @@ export function CertificateWizard({
       } else if (errorCode === 'RATE_LIMIT_EXCEEDED' || errorMessage.includes('rate limit') || errorMessage.includes('429')) {
         errorMessage = 'Let\'s Encrypt rate limit exceeded';
         errorAction = 'Wait 1 hour or use staging environment for testing.';
-      } else if (errorCode === 'WEBHOOK_FAILED' || errorMessage.includes('webhook')) {
-        errorMessage = 'DNS webhook endpoint failed';
-        errorAction = 'Check webhook accessibility and authentication token.';
+      } else if (errorCode === 'DNS_PROVIDER_FAILED' || errorMessage.includes('dns provider')) {
+        errorMessage = 'DNS provider configuration failed';
+        errorAction = 'Check your DNS provider credentials and permissions.';
       } else if (errorCode === 'ACME_NOT_CONFIGURED' || errorMessage.includes('ACME account not configured')) {
         errorMessage = 'SSL service is not configured';
         errorAction = 'Please configure ACME account first in step 2.';
@@ -410,10 +504,10 @@ export function CertificateWizard({
       setIssueErrorDetails(null);
       setIssueSuccess(null);
       setAcmeError(null);
-    setWebhookPresentUrl('');
-    setWebhookCleanupUrl('');
-    setWebhookAuthHeader('');
-    setWebhookWaitSeconds('60');
+    setDnsProviderConfig({
+      provider: 'route53',
+      credentials: {},
+    });
   };
 
   const addPrefix = () => {
@@ -428,6 +522,31 @@ export function CertificateWizard({
 
   const removePrefix = (prefix: string) => {
     setPrefixes(prefixes.filter((p) => p !== prefix));
+  };
+
+  // Validate DNS provider configuration
+  const isDNSProviderValid = (): boolean => {
+    if (challengeType !== 'dns') return true;
+    
+    const { provider, credentials } = dnsProviderConfig;
+    
+    switch (provider) {
+      case 'route53':
+        return !!(
+          credentials?.AWS_ACCESS_KEY_ID?.trim() &&
+          credentials?.AWS_SECRET_ACCESS_KEY?.trim()
+        );
+      case 'cloudflare':
+        // Either API Token OR (Email + API Key)
+        return !!(
+          credentials?.CLOUDFLARE_API_TOKEN?.trim() ||
+          (credentials?.CLOUDFLARE_EMAIL?.trim() && credentials?.CLOUDFLARE_API_KEY?.trim())
+        );
+      case 'manual':
+        return !!credentials?.WEBHOOK_PRESENT_URL?.trim(); // Require Present URL for webhook
+      default:
+        return false;
+    }
   };
 
   if (!isOpen) return null;
@@ -492,7 +611,12 @@ export function CertificateWizard({
                 <input
                   type="text"
                   value={domain}
-                  onChange={(e) => setDomain(e.target.value)}
+                  onChange={(e) => {
+                    setDomain(e.target.value);
+                    // Reset DNS provider detection when domain changes
+                    setDnsProviderDetected(false);
+                    setDnsProviderConfig({ provider: 'manual', credentials: {} });
+                  }}
                   placeholder="example.com"
                   className="mt-1 w-full rounded-lg bg-slate-950 border border-slate-700 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
                 />
@@ -517,10 +641,12 @@ export function CertificateWizard({
                   )}
                 </button>
                 <button
-                  onClick={() => {
+                  onClick={async () => {
                     if (domain.trim()) {
                       setStep(2);
                       void loadACMEAccount();
+                      // Pre-detect DNS provider when moving to step 2
+                      void detectDnsProvider();
                     }
                   }}
                   disabled={!domain.trim()}
@@ -693,7 +819,7 @@ export function CertificateWizard({
                     <div className="flex-1">
                       <div className="text-sm font-medium text-white">DNS-01 (Wildcard)</div>
                       <div className="text-xs text-slate-400 mt-1">
-                        Supports wildcard certificates (*.{domain}). Requires webhook DNS endpoints.
+                        Supports wildcard certificates (*.{domain}). Requires DNS provider configuration.
                       </div>
                     </div>
                   </label>
@@ -751,74 +877,17 @@ export function CertificateWizard({
                 )}
               </div>
 
-              {/* DNS-01 Webhook Configuration */}
+              {/* DNS-01 Provider Configuration */}
               {challengeType === 'dns' && (
-                <div className="space-y-4 p-4 rounded-lg border border-slate-700 bg-slate-950">
-                  <div className="flex items-center justify-between">
-                    <label className="text-xs font-medium text-slate-300">Webhook DNS Configuration</label>
-                    <button
-                      onClick={() => setShowWebhookHelp(true)}
-                      className="p-1 text-slate-400 hover:text-slate-300"
-                      title="Webhook DNS Help"
-                    >
-                      <HelpCircle className="h-4 w-4" />
-                    </button>
-                  </div>
-
-                  <div className="space-y-3">
-                    <div>
-                      <label className="text-xs text-slate-400 mb-1 block">
-                        Present URL <span className="text-red-400">*</span>
-                      </label>
-                      <input
-                        type="url"
-                        value={webhookPresentUrl}
-                        onChange={(e) => setWebhookPresentUrl(e.target.value)}
-                        placeholder="https://api.yourservice.com/acme/dns/present"
-                        className="w-full rounded-lg bg-slate-900 border border-slate-700 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="text-xs text-slate-400 mb-1 block">
-                        Cleanup URL <span className="text-red-400">*</span>
-                      </label>
-                      <input
-                        type="url"
-                        value={webhookCleanupUrl}
-                        onChange={(e) => setWebhookCleanupUrl(e.target.value)}
-                        placeholder="https://api.yourservice.com/acme/dns/cleanup"
-                        className="w-full rounded-lg bg-slate-900 border border-slate-700 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="text-xs text-slate-400 mb-1 block">Auth Header (Optional)</label>
-                      <input
-                        type="text"
-                        value={webhookAuthHeader}
-                        onChange={(e) => setWebhookAuthHeader(e.target.value)}
-                        placeholder="Bearer your-secret-token"
-                        className="w-full rounded-lg bg-slate-900 border border-slate-700 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="text-xs text-slate-400 mb-1 block">Wait Seconds</label>
-                      <input
-                        type="number"
-                        value={webhookWaitSeconds}
-                        onChange={(e) => setWebhookWaitSeconds(e.target.value)}
-                        placeholder="60"
-                        min="30"
-                        max="300"
-                        className="w-full rounded-lg bg-slate-900 border border-slate-700 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
-                      />
-                      <p className="mt-1 text-[11px] text-slate-500">
-                        Time to wait for DNS propagation (30-300 seconds)
-                      </p>
-                    </div>
-                  </div>
+                <div className="space-y-4">
+                  <DNSProviderConfigComponent
+                    value={dnsProviderConfig}
+                    onChange={setDnsProviderConfig}
+                    showHelp={true}
+                    domain={domain}
+                    instanceId={instanceId}
+                    preDetected={dnsProviderDetected}
+                  />
                 </div>
               )}
 
@@ -932,7 +1001,7 @@ export function CertificateWizard({
                   disabled={
                     isIssuing ||
                     !domain.trim() ||
-                    (challengeType === 'dns' && (!webhookPresentUrl.trim() || !webhookCleanupUrl.trim()))
+                    (challengeType === 'dns' && !isDNSProviderValid())
                   }
                   className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-xs font-semibold transition disabled:opacity-50 flex items-center gap-2"
                 >
@@ -952,95 +1021,6 @@ export function CertificateWizard({
         </div>
       </div>
 
-      {/* Webhook Help Modal */}
-      {showWebhookHelp && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[60]" onClick={() => setShowWebhookHelp(false)}>
-          <div
-            className="bg-slate-900 rounded-xl border border-slate-800 p-6 max-w-2xl w-full mx-4 shadow-xl max-h-[90vh] overflow-y-auto"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-white flex items-center gap-2">
-                <Info className="h-5 w-5 text-sky-400" />
-                Webhook DNS Configuration
-              </h3>
-              <button
-                onClick={() => setShowWebhookHelp(false)}
-                className="text-slate-400 hover:text-white"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-
-            <div className="space-y-4 text-sm text-slate-300">
-              <div>
-                <h4 className="text-white font-medium mb-2">Why Use Webhook DNS?</h4>
-                <ul className="list-disc list-inside space-y-1 text-slate-400">
-                  <li>Wildcard certificates (*.example.com)</li>
-                  <li>Auto-renewal support</li>
-                  <li>Works with ANY DNS provider (WHM, GoDaddy, etc.)</li>
-                  <li>Uses your existing DNS code</li>
-                </ul>
-              </div>
-
-              <div>
-                <h4 className="text-white font-medium mb-2">What You Need to Implement</h4>
-                <p className="text-slate-400 mb-3">
-                  Two webhook endpoints that handle DNS TXT record operations:
-                </p>
-
-                <div className="bg-slate-950 rounded-lg p-4 space-y-3">
-                  <div>
-                    <h5 className="text-sky-300 font-medium mb-2">1. Present Endpoint (Create TXT Record)</h5>
-                    <p className="text-xs text-slate-400 mb-2">POST {webhookPresentUrl || 'https://api.yourservice.com/acme/dns/present'}</p>
-                    <div className="bg-slate-900 rounded p-3 text-xs font-mono text-slate-300 overflow-x-auto">
-                      <div>Request Body:</div>
-                      <div>{'{'}</div>
-                      <div className="ml-4">"domain": "app.example.com",</div>
-                      <div className="ml-4">"recordName": "_acme-challenge.app.example.com.",</div>
-                      <div className="ml-4">"recordValue": "xYz123AbC456...",</div>
-                      <div className="ml-4">"zone": "example.com"</div>
-                      <div>{'}'}</div>
-                      <div className="mt-2">Response:</div>
-                      <div>{'{ "success": true, "message": "TXT record created" }'}</div>
-                    </div>
-                  </div>
-
-                  <div>
-                    <h5 className="text-sky-300 font-medium mb-2">2. Cleanup Endpoint (Delete TXT Record)</h5>
-                    <p className="text-xs text-slate-400 mb-2">POST {webhookCleanupUrl || 'https://api.yourservice.com/acme/dns/cleanup'}</p>
-                    <div className="bg-slate-900 rounded p-3 text-xs font-mono text-slate-300 overflow-x-auto">
-                      <div>Request Body:</div>
-                      <div>{'{'}</div>
-                      <div className="ml-4">"domain": "app.example.com",</div>
-                      <div className="ml-4">"recordName": "_acme-challenge.app.example.com.",</div>
-                      <div className="ml-4">"zone": "example.com"</div>
-                      <div>{'}'}</div>
-                      <div className="mt-2">Response:</div>
-                      <div>{'{ "success": true, "message": "TXT record deleted" }'}</div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-amber-500/10 border border-amber-500/40 rounded-lg p-4">
-                <div className="flex items-start gap-2">
-                  <AlertTriangle className="h-5 w-5 text-amber-400 flex-shrink-0 mt-0.5" />
-                  <div className="text-xs text-amber-200">
-                    <p className="font-medium mb-1">Important Notes:</p>
-                    <ul className="list-disc list-inside space-y-1 text-amber-300/80">
-                      <li>Both endpoints must authenticate using the Auth Header (if provided)</li>
-                      <li>Parse the subdomain from recordName: "_acme-challenge.app.example.com." → "_acme-challenge.app"</li>
-                      <li>Create/delete TXT records in your DNS provider</li>
-                      <li>Wait seconds determines how long to wait for DNS propagation</li>
-                    </ul>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
