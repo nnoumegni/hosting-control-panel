@@ -15,10 +15,8 @@ import {
   Activity,
   Lock,
   Users,
-  Package,
   CheckCircle2,
   Palette,
-  Globe2,
   Brain,
 } from 'lucide-react';
 
@@ -38,14 +36,12 @@ const navLinks = [
   { href: '/dashboard/databases', label: 'Databases', icon: Database },
   { href: '/dashboard/firewall', label: 'Firewall', icon: Network },
   { href: '/dashboard/billing', label: 'Billing', icon: CreditCard },
-  { href: '/dashboard/email', label: 'Email (SES)', icon: Mail },
+  { href: '/dashboard/email', label: 'Identity (SES)', icon: Mail },
   { href: '/dashboard/email-providers', label: 'Email Providers', icon: Mail },
-  { href: '/dashboard/domains', label: 'Websites', icon: Globe },
-  { href: '/dashboard/dns', label: 'DNS Management', icon: Globe2 },
+  { href: '/dashboard/domains', label: 'Websites & DNS', icon: Globe },
   { href: '/dashboard/ssl', label: 'SSL Certificates', icon: Lock },
   { href: '/dashboard/backups', label: 'Backups', icon: HardDrive },
   { href: '/dashboard/monitoring', label: 'Monitoring', icon: Activity },
-  { href: '/dashboard/shipping', label: 'Shipping', icon: Package },
   { href: '/dashboard/themes-and-apps', label: 'Themes & Apps', icon: Palette },
   { href: '/dashboard/system-status', label: 'System Status', icon: CheckCircle2 },
 ];
