@@ -40,3 +40,5 @@ export interface DnsStatusRepository {
   deleteByDomainId(domainId: string): Promise<void>;
 }
 
+
+

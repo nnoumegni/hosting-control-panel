@@ -45,3 +45,5 @@ export interface MailProviderRepository {
   deleteByDomainId(domainId: string): Promise<void>;
 }
 
+
+

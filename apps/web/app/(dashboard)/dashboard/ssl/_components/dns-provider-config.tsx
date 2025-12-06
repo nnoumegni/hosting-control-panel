@@ -58,15 +58,28 @@ export function DNSProviderConfig({ value, onChange, showHelp = true, domain, in
   const [showProviderSpecificHelp, setShowProviderSpecificHelp] = useState(false);
   const [isDetecting, setIsDetecting] = useState(false);
   const [detectedDomain, setDetectedDomain] = useState<string | null>(null);
-  const [detectionComplete, setDetectionComplete] = useState(false);
+  // Initialize detectionComplete based on preDetected to avoid unnecessary spinner
+  const [detectionComplete, setDetectionComplete] = useState(preDetected);
+  const [showManualOptions, setShowManualOptions] = useState(false);
 
   // Reset detected domain and detection state when domain changes
   useEffect(() => {
     if (domain !== detectedDomain) {
       setDetectedDomain(null);
-      setDetectionComplete(false);
+      // Only reset detectionComplete if not pre-detected
+      if (!preDetected) {
+        setDetectionComplete(false);
+      }
     }
-  }, [domain, detectedDomain]);
+  }, [domain, detectedDomain, preDetected]);
+
+  // Update detectionComplete when preDetected changes
+  useEffect(() => {
+    if (preDetected) {
+      setDetectionComplete(true);
+      setIsDetecting(false);
+    }
+  }, [preDetected]);
 
   // Detect DNS provider based on domain
   useEffect(() => {
@@ -492,17 +505,26 @@ export function DNSProviderConfig({ value, onChange, showHelp = true, domain, in
       {value.provider === 'manual' && (
         <div className="space-y-3 p-4 rounded-lg border border-slate-700 bg-slate-900/40">
           <div>
-            <label className="block text-sm font-medium text-slate-300 mb-1">
-              Present URL
-              <span className="text-rose-400 ml-1">*</span>
+            <div className="flex items-center justify-between mb-1">
+              <label className="block text-sm font-medium text-slate-300">
+                Present URL
+                <span className="text-rose-400 ml-1">*</span>
+                <button
+                  type="button"
+                  onClick={() => toggleFieldHelp('WEBHOOK_PRESENT_URL')}
+                  className="ml-2 text-slate-400 hover:text-slate-300"
+                >
+                  <HelpCircle className="h-3 w-3 inline" />
+                </button>
+              </label>
               <button
                 type="button"
-                onClick={() => toggleFieldHelp('WEBHOOK_PRESENT_URL')}
-                className="ml-2 text-slate-400 hover:text-slate-300"
+                onClick={() => setShowManualOptions(!showManualOptions)}
+                className="text-xs text-sky-400 hover:text-sky-300 transition-colors"
               >
-                <HelpCircle className="h-3 w-3 inline" />
+                {showManualOptions ? 'Hide options' : 'More options'}
               </button>
-            </label>
+            </div>
             <input
               type="url"
               value={value.credentials?.WEBHOOK_PRESENT_URL || ''}
@@ -517,82 +539,59 @@ export function DNSProviderConfig({ value, onChange, showHelp = true, domain, in
             )}
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-slate-300 mb-1">
-              Cleanup URL
-              <button
-                type="button"
-                onClick={() => toggleFieldHelp('WEBHOOK_CLEANUP_URL')}
-                className="ml-2 text-slate-400 hover:text-slate-300"
-              >
-                <HelpCircle className="h-3 w-3 inline" />
-              </button>
-            </label>
-            <input
-              type="url"
-              value={value.credentials?.WEBHOOK_CLEANUP_URL || ''}
-              onChange={(e) => handleCredentialChange('WEBHOOK_CLEANUP_URL', e.target.value)}
-              placeholder="https://api.example.com/acme/dns/cleanup"
-              className="w-full rounded-lg border border-slate-700 bg-slate-900/60 px-3 py-2 text-sm text-white placeholder-slate-500 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
-            />
-            {showFieldHelp['WEBHOOK_CLEANUP_URL'] && (
-              <p className="mt-1 text-xs text-slate-400">
-                Optional endpoint called to remove DNS TXT records after certificate issuance.
-              </p>
-            )}
-          </div>
+          {showManualOptions && (
+            <>
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-1">
+                  Cleanup URL
+                  <button
+                    type="button"
+                    onClick={() => toggleFieldHelp('WEBHOOK_CLEANUP_URL')}
+                    className="ml-2 text-slate-400 hover:text-slate-300"
+                  >
+                    <HelpCircle className="h-3 w-3 inline" />
+                  </button>
+                </label>
+                <input
+                  type="url"
+                  value={value.credentials?.WEBHOOK_CLEANUP_URL || ''}
+                  onChange={(e) => handleCredentialChange('WEBHOOK_CLEANUP_URL', e.target.value)}
+                  placeholder="https://api.example.com/acme/dns/cleanup"
+                  className="w-full rounded-lg border border-slate-700 bg-slate-900/60 px-3 py-2 text-sm text-white placeholder-slate-500 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                />
+                {showFieldHelp['WEBHOOK_CLEANUP_URL'] && (
+                  <p className="mt-1 text-xs text-slate-400">
+                    Optional endpoint called to remove DNS TXT records after certificate issuance.
+                  </p>
+                )}
+              </div>
 
-          <div>
-            <label className="block text-sm font-medium text-slate-300 mb-1">
-              Auth Header
-              <button
-                type="button"
-                onClick={() => toggleFieldHelp('WEBHOOK_AUTH_HEADER')}
-                className="ml-2 text-slate-400 hover:text-slate-300"
-              >
-                <HelpCircle className="h-3 w-3 inline" />
-              </button>
-            </label>
-            <input
-              type="text"
-              value={value.credentials?.WEBHOOK_AUTH_HEADER || ''}
-              onChange={(e) => handleCredentialChange('WEBHOOK_AUTH_HEADER', e.target.value)}
-              placeholder="Bearer your-secret-token"
-              className="w-full rounded-lg border border-slate-700 bg-slate-900/60 px-3 py-2 text-sm text-white placeholder-slate-500 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
-            />
-            {showFieldHelp['WEBHOOK_AUTH_HEADER'] && (
-              <p className="mt-1 text-xs text-slate-400">
-                Optional authorization header value for webhook requests (e.g., "Bearer token" or "ApiKey key").
-              </p>
-            )}
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-slate-300 mb-1">
-              Wait Seconds
-              <button
-                type="button"
-                onClick={() => toggleFieldHelp('WEBHOOK_WAIT_SECONDS')}
-                className="ml-2 text-slate-400 hover:text-slate-300"
-              >
-                <HelpCircle className="h-3 w-3 inline" />
-              </button>
-            </label>
-            <input
-              type="number"
-              value={value.credentials?.WEBHOOK_WAIT_SECONDS || '60'}
-              onChange={(e) => handleCredentialChange('WEBHOOK_WAIT_SECONDS', e.target.value)}
-              placeholder="60"
-              min="0"
-              max="300"
-              className="w-full rounded-lg border border-slate-700 bg-slate-900/60 px-3 py-2 text-sm text-white placeholder-slate-500 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
-            />
-            {showFieldHelp['WEBHOOK_WAIT_SECONDS'] && (
-              <p className="mt-1 text-xs text-slate-400">
-                Seconds to wait after calling present URL before verifying DNS (default: 60). Increase if DNS propagation is slow.
-              </p>
-            )}
-          </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-1">
+                  Auth Header
+                  <button
+                    type="button"
+                    onClick={() => toggleFieldHelp('WEBHOOK_AUTH_HEADER')}
+                    className="ml-2 text-slate-400 hover:text-slate-300"
+                  >
+                    <HelpCircle className="h-3 w-3 inline" />
+                  </button>
+                </label>
+                <input
+                  type="text"
+                  value={value.credentials?.WEBHOOK_AUTH_HEADER || ''}
+                  onChange={(e) => handleCredentialChange('WEBHOOK_AUTH_HEADER', e.target.value)}
+                  placeholder="Bearer your-secret-token"
+                  className="w-full rounded-lg border border-slate-700 bg-slate-900/60 px-3 py-2 text-sm text-white placeholder-slate-500 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                />
+                {showFieldHelp['WEBHOOK_AUTH_HEADER'] && (
+                  <p className="mt-1 text-xs text-slate-400">
+                    Optional authorization header value for webhook requests (e.g., "Bearer token" or "ApiKey key").
+                  </p>
+                )}
+              </div>
+            </>
+          )}
         </div>
       )}
 

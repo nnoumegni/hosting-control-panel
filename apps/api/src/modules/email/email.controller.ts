@@ -2,8 +2,12 @@ import type { Request, Response } from 'express';
 
 import { asyncHandler } from '../../shared/http/async-handler.js';
 import type { EmailService } from './email.service.js';
+import type { EmailSecurityService } from './email.security.service.js';
 
-export const createEmailController = (service: EmailService) => ({
+export const createEmailController = (
+  service: EmailService,
+  securityService?: EmailSecurityService,
+) => ({
   listIdentities: asyncHandler(async (req: Request, res: Response) => {
     const overview = await service.listIdentities();
     const { domain } = req.query as { domain?: string };
@@ -56,6 +60,26 @@ export const createEmailController = (service: EmailService) => ({
     const { identity } = req.params as { identity: string };
     await service.deleteIdentity(identity);
     res.json({ success: true, message: `Identity ${identity} deleted successfully` });
+  }),
+
+  getMonitoringData: asyncHandler(async (_req: Request, res: Response) => {
+    const monitoringData = await service.getMonitoringData();
+    
+    // Enhance with real suppression stats if security service is available
+    if (securityService) {
+      try {
+        const suppressionStats = await securityService.getSuppressionStats();
+        monitoringData.suppression = {
+          bounce: suppressionStats.bounce,
+          complaint: suppressionStats.complaint,
+        };
+      } catch (error) {
+        // If suppression stats fail, keep the estimated values
+        console.error('Failed to get suppression stats', error);
+      }
+    }
+    
+    res.json(monitoringData);
   }),
 });
 

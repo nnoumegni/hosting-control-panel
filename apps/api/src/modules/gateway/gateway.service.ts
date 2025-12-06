@@ -6,7 +6,6 @@ import { logger } from '../../core/logger/index.js';
 import { BadRequestError } from '../../shared/errors.js';
 import type { ServerSettingsProvider } from '../server-settings/server-settings-provider.js';
 import type { GatewayAISettingsProvider } from './gateway-ai-settings-provider.js';
-import type { ServerSettingsInternal } from '../server-settings/server-settings-provider.js';
 
 const AGENT_API_PORT = 9811;
 

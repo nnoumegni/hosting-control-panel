@@ -14,6 +14,7 @@ import { createSSLModule } from '../modules/ssl/ssl.module.js';
 import { createGatewayModule } from '../modules/gateway/gateway.module.js';
 import { createMailProvidersModule } from '../modules/mail-providers/mail-providers.module.js';
 import { createDNSModule } from '../modules/dns/dns.module.js';
+import { createIAMModule } from '../modules/iam/iam.module.js';
 import { healthRouter } from './health.js';
 
 export async function createApiRouter(httpServer?: Server): Promise<{ 
@@ -82,6 +83,9 @@ export async function createApiRouter(httpServer?: Server): Promise<{
 
   const dnsModule = await createDNSModule();
   router.use('/dns', dnsModule.router);
+
+  const iamModule = await createIAMModule();
+  router.use('/iam', iamModule.router);
 
   // Return both router and domains module for scheduler access
   return {

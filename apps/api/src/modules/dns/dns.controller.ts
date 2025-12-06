@@ -23,7 +23,8 @@ export const createDNSController = (service: DNSService) => ({
     const { hostname, instanceId } = req.query as { hostname: string; instanceId?: string };
 
     if (!hostname) {
-      return res.status(400).json({ error: 'hostname parameter is required' });
+      res.status(400).json({ error: 'hostname parameter is required' });
+      return;
     }
 
     const result = await service.getDiagnostics(hostname, instanceId);

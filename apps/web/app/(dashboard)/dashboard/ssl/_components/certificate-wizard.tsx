@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Loader2, X, Info, HelpCircle, CheckCircle2, AlertTriangle, Shield, Save } from 'lucide-react';
 import { apiFetch } from '../../../../../lib/api';
 import { DNSProviderConfig as DNSProviderConfigComponent, type DNSProviderConfig } from './dns-provider-config';
@@ -337,7 +337,8 @@ export function CertificateWizard({
       };
 
       // Add altNames from prefixes (e.g., ["www"] -> ["www.example.com"])
-      if (prefixes.length > 0) {
+      // Skip altNames for wildcard domains (they already cover all subdomains)
+      if (prefixes.length > 0 && !isWildcardDomain) {
         issueConfig.altNames = prefixes.map(prefix => {
           // Handle wildcard prefix
           if (prefix.startsWith('*')) {
@@ -353,9 +354,14 @@ export function CertificateWizard({
         issueConfig.challengeType = 'dns';
         // Map 'manual' to 'webhook' for the agent API
         const providerForAgent = dnsProviderConfig.provider === 'manual' ? 'webhook' : dnsProviderConfig.provider;
+        // Set default Wait Seconds to 180 (3 minutes) for manual DNS if not provided
+        const credentials = { ...dnsProviderConfig.credentials };
+        if (providerForAgent === 'webhook' && !credentials.WEBHOOK_WAIT_SECONDS) {
+          credentials.WEBHOOK_WAIT_SECONDS = '180';
+        }
         issueConfig.dnsProvider = {
           provider: providerForAgent,
-          credentials: dnsProviderConfig.credentials || {},
+          credentials,
         };
         addLog(`Using DNS-01 challenge with ${dnsProviderConfig.provider === 'manual' ? 'webhook' : dnsProviderConfig.provider} provider...`);
       } else {
@@ -549,6 +555,48 @@ export function CertificateWizard({
     }
   };
 
+  // Check if domain is a wildcard
+  const isWildcardDomain = domain.trim().startsWith('*');
+  
+  // Check if any prefix is a wildcard
+  const hasWildcardPrefix = prefixes.some(p => p === '*' || p.startsWith('*'));
+  
+  // HTTP-01 cannot be used for wildcard certificates
+  const canUseHttp01 = !isWildcardDomain && !hasWildcardPrefix;
+
+  // Auto-switch to DNS-01 if HTTP-01 is not available and currently selected
+  useEffect(() => {
+    if (!canUseHttp01 && challengeType === 'http') {
+      setChallengeType('dns');
+    }
+  }, [canUseHttp01, challengeType]);
+
+  // Track previous wildcard state to detect transitions
+  const prevIsWildcardDomainRef = useRef<boolean | null>(null);
+
+  // Handle prefixes based on wildcard domain status
+  useEffect(() => {
+    const wasWildcard = prevIsWildcardDomainRef.current;
+    
+    if (isWildcardDomain) {
+      // Clear prefixes for wildcard domains (they cover all subdomains)
+      setPrefixes([]);
+    } else if (domain.trim()) {
+      // For non-wildcard domains, ensure "www" is included by default
+      // Only add if: domain just switched from wildcard to non-wildcard, or prefixes is empty
+      setPrefixes(prev => {
+        // If switching from wildcard or prefixes is empty, add "www"
+        if (wasWildcard === true || prev.length === 0) {
+          return ['www'];
+        }
+        // Otherwise keep existing prefixes (user may have removed "www")
+        return prev;
+      });
+    }
+    
+    prevIsWildcardDomainRef.current = isWildcardDomain;
+  }, [isWildcardDomain, domain]);
+
   if (!isOpen) return null;
 
   return (
@@ -621,8 +669,62 @@ export function CertificateWizard({
                   className="mt-1 w-full rounded-lg bg-slate-950 border border-slate-700 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
                 />
                 <p className="mt-1 text-[11px] text-slate-500">
-                  Enter the primary domain name. "www" prefix will be added by default, but you can customize it in step 3.
+                  Enter the primary domain name.
                 </p>
+              </div>
+
+              {/* Additional Domain Prefixes */}
+              <div>
+                <label className="text-xs font-medium text-slate-300 mb-2 block">
+                  Additional Domain Prefixes (Optional)
+                </label>
+                <p className="text-[11px] text-slate-500 mb-2">
+                  {isWildcardDomain 
+                    ? 'Wildcard domain already covers all subdomains. No additional prefixes needed.'
+                    : 'Add subdomain prefixes to include in the certificate. "www" is included by default.'}
+                </p>
+                <div className="flex gap-2 mb-2">
+                  <input
+                    type="text"
+                    value={newPrefix}
+                    onChange={(e) => setNewPrefix(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        addPrefix();
+                      }
+                    }}
+                    placeholder="api, mail, app, * (for wildcard)"
+                    disabled={isWildcardDomain}
+                    className="flex-1 rounded-lg bg-slate-950 border border-slate-700 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                  />
+                  <button
+                    onClick={addPrefix}
+                    disabled={!newPrefix.trim() || isWildcardDomain}
+                    className="px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-medium transition disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Add
+                  </button>
+                </div>
+                {!isWildcardDomain && prefixes.length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {prefixes.map((prefix) => (
+                      <span
+                        key={prefix}
+                        className="inline-flex items-center gap-1 px-2 py-1 bg-sky-500/20 text-sky-300 rounded text-xs"
+                      >
+                        {prefix}.{domain || 'example.com'}
+                        <button
+                          onClick={() => removePrefix(prefix)}
+                          className="hover:text-sky-100"
+                          title="Remove prefix"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
               </div>
 
               <div className="flex items-center justify-between">
@@ -790,19 +892,26 @@ export function CertificateWizard({
               <div>
                 <label className="text-xs font-medium text-slate-300 mb-2 block">Challenge Type</label>
                 <div className="space-y-2">
-                  <label className="flex items-start gap-3 p-3 rounded-lg border border-slate-700 bg-slate-950 cursor-pointer hover:bg-slate-900">
+                  <label className={`flex items-start gap-3 p-3 rounded-lg border border-slate-700 bg-slate-950 ${
+                    canUseHttp01 ? 'cursor-pointer hover:bg-slate-900' : 'opacity-50 cursor-not-allowed'
+                  }`}>
                     <input
                       type="radio"
                       name="challengeType"
                       value="http"
                       checked={challengeType === 'http'}
                       onChange={() => setChallengeType('http')}
-                      className="mt-0.5"
+                      disabled={!canUseHttp01}
+                      className="mt-0.5 disabled:cursor-not-allowed"
                     />
                     <div className="flex-1">
                       <div className="text-sm font-medium text-white">HTTP-01 (Standard)</div>
                       <div className="text-xs text-slate-400 mt-1">
-                        Issues certificate for {domain} and www.{domain}. Requires port 80 access.
+                        {canUseHttp01 
+                          ? 'This Requires port 80 access for all the domains/subdomains'
+                          : isWildcardDomain 
+                            ? 'HTTP-01 cannot be used for wildcard domains. Use DNS-01 challenge instead.'
+                            : 'HTTP-01 cannot be used for wildcard certificates. Use DNS-01 challenge instead.'}
                       </div>
                     </div>
                   </label>
@@ -819,62 +928,13 @@ export function CertificateWizard({
                     <div className="flex-1">
                       <div className="text-sm font-medium text-white">DNS-01 (Wildcard)</div>
                       <div className="text-xs text-slate-400 mt-1">
-                        Supports wildcard certificates (*.{domain}). Requires DNS provider configuration.
+                        {isWildcardDomain 
+                          ? `Supports wildcard certificates (${domain}). Requires DNS provider configuration.`
+                          : `Supports wildcard certificates (*.${domain}). Requires DNS provider configuration.`}
                       </div>
                     </div>
                   </label>
                 </div>
-              </div>
-
-              {/* Additional Domain Prefixes */}
-              <div>
-                <label className="text-xs font-medium text-slate-300 mb-2 block">
-                  Additional Domain Prefixes (Optional)
-                </label>
-                <p className="text-[11px] text-slate-500 mb-2">
-                  Add subdomain prefixes to include in the certificate. "www" is included by default.
-                </p>
-                <div className="flex gap-2 mb-2">
-                  <input
-                    type="text"
-                    value={newPrefix}
-                    onChange={(e) => setNewPrefix(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault();
-                        addPrefix();
-                      }
-                    }}
-                    placeholder="api, mail, app, * (for wildcard)"
-                    className="flex-1 rounded-lg bg-slate-950 border border-slate-700 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
-                  />
-                  <button
-                    onClick={addPrefix}
-                    disabled={!newPrefix.trim()}
-                    className="px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-medium transition disabled:opacity-50"
-                  >
-                    Add
-                  </button>
-                </div>
-                {prefixes.length > 0 && (
-                  <div className="flex flex-wrap gap-2">
-                    {prefixes.map((prefix) => (
-                      <span
-                        key={prefix}
-                        className="inline-flex items-center gap-1 px-2 py-1 bg-sky-500/20 text-sky-300 rounded text-xs"
-                      >
-                        {prefix}.{domain || 'example.com'}
-                        <button
-                          onClick={() => removePrefix(prefix)}
-                          className="hover:text-sky-100"
-                          title="Remove prefix"
-                        >
-                          <X className="h-3 w-3" />
-                        </button>
-                      </span>
-                    ))}
-                  </div>
-                )}
               </div>
 
               {/* DNS-01 Provider Configuration */}
@@ -968,7 +1028,7 @@ export function CertificateWizard({
                     <p className="text-slate-200 font-medium mb-2">Review & Issue</p>
                     <ul className="space-y-1">
                       <li>• Domain: <span className="font-mono text-sky-300">{domain}</span></li>
-                      {prefixes.length > 0 && (
+                      {!isWildcardDomain && prefixes.length > 0 && (
                         <li>
                           • Additional: <span className="font-mono text-sky-300">
                             {prefixes.map(p => `${p}.${domain}`).join(', ')}

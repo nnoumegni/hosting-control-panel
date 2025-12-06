@@ -140,11 +140,11 @@ export class DNSService {
       const response = await fetch(url.toString(), requestInit);
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+        const errorData = (await response.json().catch(() => ({ error: 'Unknown error' }))) as { error?: string };
         throw new Error(errorData.error || `Agent request failed: ${response.statusText}`);
       }
 
-      return await response.json();
+      return (await response.json()) as T;
     } catch (error) {
       logger.error({ err: error, url: url.toString() }, 'Agent request failed');
       throw error;
